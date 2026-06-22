@@ -1,0 +1,412 @@
+/* ==========================================================================
+   project.detail.css
+   Carbon Credit Marketplace - Project Detail (KarbonNusa)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght=600;700&family=DM+Sans:wght=300;400;500;600&display=swap');
+
+:root {
+  --green-900: #0d2e1a;
+  --green-800: #14432a;
+  --green-700: #1a5c38;
+  --green-600: #1f7a47;
+  --green-500: #27a05e;
+  --green-300: #6ed49a;
+  --green-100: #d4f3e3;
+  --green-50:  #f0faf5;
+  --cream:    #faf8f3;
+  --text-primary:   #0d1f14;
+  --text-secondary: #3a5244;
+  --text-muted:     #708a7b;
+  --border:   #e1ebe5;
+  --white:    #ffffff;
+
+  --font-display: 'Playfair Display', serif;
+  --font-sans:    'DM Sans', sans-serif;
+
+  --radius-md: 12px;
+  --radius-lg: 16px; 
+  --shadow-sm: 0 2px 8px rgba(13, 31, 20, 0.04);
+  --shadow-md: 0 10px 30px rgba(13, 31, 20, 0.06);
+  --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--cream);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.detail-container {
+  padding: 64px 0 80px; /* Memberi ruang aman dari navbar atas */
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* --- Breadcrumb --- */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.breadcrumb-item a {
+  color: #0066cc; /* Warna biru sesuai Code 1 */
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.breadcrumb-item a:hover {
+  color: #004499;
+  text-decoration: underline;
+}
+
+.breadcrumb-item.active {
+  color: var(--text-primary);
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  content: '/';
+  color: var(--text-muted);
+  margin-right: 8px;
+}
+
+/* --- Project Header --- */
+.project-header {
+  margin: 0 0 24px 0;
+}
+
+.project-title {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--green-900);
+  line-height: 1.2;
+  margin: 0 0 8px 0;
+}
+
+.project-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  margin: 0;
+}
+
+.project-location svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--green-600);
+}
+
+/* --- Grid Layout --- */
+.project-detail-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+/* --- Left Column Elements --- */
+.project-hero {
+  position: relative;
+  height: 440px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  background: var(--green-900);
+}
+
+.project-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(13,46,26,0.4) 100%);
+}
+
+.hero-badge {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 16px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green-900);
+}
+
+.hero-badge svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--green-500);
+}
+
+.project-gallery {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.thumb-item {
+  width: 80px;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 0.6;
+  border: 2px solid transparent;
+  transition: var(--transition);
+}
+
+.thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-item.active, .thumb-item:hover {
+  opacity: 1;
+  border-color: var(--green-500);
+}
+
+/* --- Right Column Sidebar & Cards --- */
+.purchase-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px; /* Menghilangkan penempelan antar kotak detail */
+}
+
+.pc-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.pc-company {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--green-600);
+  font-weight: 700;
+}
+
+.pc-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--green-900);
+  margin-top: 4px;
+}
+
+.pc-meta-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.pc-meta-row .key { color: var(--text-secondary); }
+.pc-meta-row .val { font-weight: 600; }
+.pc-meta-row .val.stock { color: var(--green-600); }
+
+.pc-pricing {
+  background: var(--green-50);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin: 16px 0;
+}
+
+.pc-pricing .price-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.price-main {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.price-currency { font-size: 16px; font-weight: 700; color: var(--green-900); }
+.price-amount { font-size: 28px; font-weight: 700; color: var(--green-900); }
+.price-unit { font-size: 14px; color: var(--text-secondary); }
+.price-note { font-size: 11px; color: var(--text-muted); }
+
+/* --- Stepper & Elements --- */
+.qty-wrapper {
+  margin-bottom: 20px;
+}
+
+.qty-label { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.qty-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+
+.qty-stepper {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--white);
+}
+
+.qty-btn {
+  background: #f8f9fa;
+  border: none;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.qty-btn:hover { background: var(--border); }
+.qty-input {
+  width: 50px;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  text-align: center;
+  font-weight: 600;
+}
+
+.qty-total { font-size: 16px; font-weight: 700; color: var(--green-900); }
+
+.emission-equiv {
+  display: flex;
+  gap: 8px;
+  background: #fdfaf4;
+  border: 1px solid #f3ebd7;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+  font-size: 13px;
+  color: #725c2c;
+}
+
+.pc-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- Tabs Styling --- */
+.tabs-wrapper {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+  box-shadow: var(--shadow-sm);
+  margin-top: 24px; /* Gap pengaman yang kokoh */
+}
+
+.tabs-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 12px 0;
+  gap: 20px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 10px 4px 14px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+}
+
+.tab-btn.active { color: var(--green-900); }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0; right: 0;
+  height: 3px;
+  background: var(--green-500);
+  border-radius: 3px 3px 0 0;
+}
+
+.tabs-content { padding: 20px 16px; }
+.tab-pane { display: none; animation: fadeIn 0.4s ease; }
+.tab-pane.active { display: block; }
+.tab-pane h3 { font-size: 16px; margin: 0 0 10px 0; }
+.tab-pane p { font-size: 14.5px; line-height: 1.6; color: var(--text-secondary); margin: 0; }
+
+/* --- Buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: none;
+  transition: var(--transition);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--green-500);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(39,160,94,.2);
+}
+
+.btn-primary:hover { background: var(--green-600); transform: translateY(-1px); }
+.btn-secondary {
+  background: var(--white);
+  color: var(--green-700);
+  border: 1.5px solid var(--green-300);
+}
+.btn-secondary:hover { background: var(--green-50); }
+
+/* --- Toast --- */
+.toast-box {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  background: var(--green-900);
+  color: var(--white);
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1024px) {
+  .project-detail-layout { grid-template-columns: 1fr; gap: 32px; }
+}
