@@ -22,4 +22,25 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    const scopeModal = document.getElementById('scope-detail-modal');
+    const openScopeDetail = document.querySelector('[data-open-scope-detail]');
+
+    if (scopeModal && openScopeDetail) {
+        openScopeDetail.addEventListener('click', function () {
+            scopeModal.showModal();
+        });
+
+        scopeModal.querySelectorAll('[data-close-scope-detail]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                scopeModal.close();
+            });
+        });
+
+        scopeModal.addEventListener('click', function (event) {
+            if (event.target === scopeModal) {
+                scopeModal.close();
+            }
+        });
+    }
 });

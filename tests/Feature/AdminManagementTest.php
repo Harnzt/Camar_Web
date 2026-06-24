@@ -3,6 +3,8 @@
 use App\Models\AdminActivityLog;
 use App\Models\DocumentVerification;
 use App\Models\User;
+use App\Models\AdminLoginLog;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -91,6 +93,68 @@ test('super admin can create an admin account', function () {
         'role' => 'admin',
         'status' => 'verified',
     ]);
+});
+
+test('super admin can edit status password and delete another admin', function () {
+    $superAdmin = createAdministrativeUser('super_admin');
+    $admin = createAdministrativeUser('admin');
+
+    $this->actingAs($superAdmin)
+        ->patch(route('admin.admins.update', $admin), [
+            'name' => 'Admin Baru',
+            'email' => 'admin-baru@example.test',
+            'role' => 'admin',
+        ])
+        ->assertRedirect();
+
+    $this->actingAs($superAdmin)
+        ->patch(route('admin.admins.status', $admin), ['status' => 'suspended'])
+        ->assertRedirect();
+
+    $this->actingAs($superAdmin)
+        ->patch(route('admin.admins.password', $admin), [
+            'password' => 'PasswordBaru123!',
+            'password_confirmation' => 'PasswordBaru123!',
+        ])
+        ->assertRedirect();
+
+    $admin->refresh();
+    expect($admin->name)->toBe('Admin Baru')
+        ->and($admin->status)->toBe('suspended')
+        ->and(Hash::check('PasswordBaru123!', $admin->password))->toBeTrue();
+
+    $this->actingAs($superAdmin)
+        ->delete(route('admin.admins.destroy', $admin))
+        ->assertRedirect();
+
+    expect($admin->fresh()->trashed())->toBeTrue();
+});
+
+test('administrator login and logout are recorded', function () {
+    $admin = createAdministrativeUser('admin');
+
+    $this->post(route('login.process'), [
+        'email' => $admin->email,
+        'password' => 'password',
+    ])->assertRedirect(route('admin.dashboard'));
+
+    $log = AdminLoginLog::where('admin_id', $admin->id)->first();
+    expect($log)->not->toBeNull()
+        ->and($log->logged_out_at)->toBeNull();
+
+    $this->post(route('logout'))->assertRedirect(route('login'));
+
+    expect($log->fresh()->logged_out_at)->not->toBeNull();
+});
+
+test('super admin cannot delete own account', function () {
+    $superAdmin = createAdministrativeUser('super_admin');
+
+    $this->actingAs($superAdmin)
+        ->delete(route('admin.admins.destroy', $superAdmin))
+        ->assertSessionHasErrors('delete');
+
+    expect($superAdmin->fresh()->trashed())->toBeFalse();
 });
 
 test('administrator can view the complete public landing page', function () {

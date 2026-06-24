@@ -174,6 +174,8 @@ function toggleModule(id) {
 const ROW_TEMPLATES = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    organisePersonalCalculator();
+
     // Cache first row of each group as template
     document.querySelectorAll('[data-group]').forEach(row => {
         const g = row.dataset.group;
@@ -181,6 +183,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     initAll();
 });
+
+function organisePersonalCalculator() {
+    const scope2Slot = document.getElementById('personal-scope2-modules');
+    const scope3Slot = document.getElementById('personal-scope3-modules');
+    const electricityModule = document.getElementById('p_electricity-content')?.closest('.calc-module');
+    const transitModule = document.getElementById('p_transit-content')?.closest('.calc-module');
+
+    if (scope2Slot && electricityModule) {
+        scope2Slot.appendChild(electricityModule);
+    }
+
+    if (scope3Slot && transitModule) {
+        scope3Slot.appendChild(transitModule);
+    }
+}
 
 function addRow(group) {
     const container = document.getElementById(`rows_${group}`);
@@ -461,63 +478,15 @@ function calcCompanyAll() {
             return;
         }
 
-        const box = document.getElementById('result-box');
-            if (box) {
-                box.style.display = 'block';
-                
-                // Isi text data dasar ringkasan angka
-                document.getElementById('hasil-emisi').textContent = (totalKg / 1000).toFixed(3) + ' ton CO₂e';
-                document.getElementById('hasil-biaya').textContent = 'Rp ' + (Math.round((totalKg / 1000) * 150000)).toLocaleString('id-ID');
-                document.getElementById('rekomendasi-proyek').textContent = mode === 'personal' ? 'Reforestasi Mangrove Pesisir' : 'Konservasi Hutan Lindung';
-                
-                // Hitung pohon setara (Asumsi 1 pohon menyerap 21.77 kg CO2 per tahun)
-                const trees = Math.ceil(totalKg / 21.77);
-                const treeEl = document.getElementById('tree-equivalent');
-                if (treeEl) treeEl.textContent = trees.toLocaleString('id-ID');
+        window.currentCalculationData = {
+            mode: mode,
+            total_kg: totalKg,
+            details: details
+        };
 
-                // 3. Render Grafik Batang Distribusi Emisi secara visual
-                const distBars = document.getElementById('distribution-bars');
-                if (distBars) {
-                    distBars.innerHTML = '';
-                    let index = 0;
-                    const colors = ['fill-scope1', 'fill-scope2', 'fill-scope3', 'fill-generic'];
-                    
-                    Object.entries(details).forEach(([key, val]) => {
-                        if (val <= 0) return; // Jangan tampilkan kategori yang kosong/nol
-                        const pct = ((val / totalKg) * 100).toFixed(1);
-                        
-                        // Merapikan nama label agar enak dibaca (Contoh: p_energy menjadi ENERGY)
-                        const cleanLabel = key.replace('p_', '').replace('c_', '').toUpperCase();
-                        
-                        distBars.innerHTML += `
-                            <div class="distribution-row" style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                                <span class="distribution-label" style="min-width:140px; font-size:.78rem; font-weight:700; color:#124170;">${cleanLabel}</span>
-                                <div class="distribution-track" style="flex:1; height:8px; background:#e9ecef; border-radius:99px; overflow:hidden;">
-                                    <div class="distribution-fill ${colors[index % colors.length]}" id="livebar_${index}" style="width:0%; height:100%; border-radius:99px; transition:width 0.6s ease;"></div>
-                                </div>
-                                <span class="distribution-pct" style="min-width:45px; text-align:right; font-weight:700; font-size:.78rem; color:#124170;">${pct}%</span>
-                            </div>`;
-                        
-                        // Memicu animasi bar bergerak maju secara smooth
-                        setTimeout(() => {
-                            const b = document.getElementById(`livebar_${index - 1}`);
-                            if (b) b.style.width = pct + '%';
-                        }, 100);
-                        
-                        index++;
-                    });
-                }
-
-                // Simpan data kalkulasi mentah sementara ke dalam memori global browser agar bisa disimpan saat klik tombol simpan
-                window.currentCalculationData = {
-                    mode: mode,
-                    total_kg: totalKg,
-                    details: details
-                };
-
-                // Scroll layar ke bawah menuju kotak hasil secara mulus
-                box.scrollIntoView({ behavior: 'smooth' });
-            }     
+        renderPersonalResult(details, totalKg);
+        switchTab('p', 4, 4);
+        document.getElementById('result-box')?.scrollIntoView({ behavior: 'smooth' });
     }
 
     function showResults(data) {
@@ -540,69 +509,105 @@ function renderPersonalResult(cats, totalKg) {
     const box = document.getElementById('result-box');
     if (!box) return;
     box.style.display = 'block';
-    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     const totalTon = totalKg / 1000;
+    const scope1 = cats.energy_rt + cats.vehicle;
+    const scope2 = cats.electricity;
+    const scope3 = cats.transit + cats.food + cats.water + cats.waste;
+    const items = [
+        { label: 'Scope 1 — Energi Rumah Tangga', kg: cats.energy_rt },
+        { label: 'Scope 1 — Kendaraan Pribadi', kg: cats.vehicle },
+        { label: 'Scope 2 — Listrik', kg: cats.electricity },
+        { label: 'Scope 3 — Transportasi', kg: cats.transit },
+        { label: 'Scope 3 — Pangan', kg: cats.food },
+        { label: 'Scope 3 — Air Bersih', kg: cats.water },
+        { label: 'Scope 3 — Limbah', kg: cats.waste },
+    ];
 
-    // Grid
-    const grid = document.getElementById('result-grid-personal');
-    if (grid) {
-        grid.innerHTML = '';
-        Object.entries(cats).forEach(([label, kg]) => {
-            const ton = kg / 1000;
-            grid.innerHTML += `
-                <div class="result-item">
-                    <div class="result-label">${label}</div>
-                    <div class="result-value">${ton < 1 ? kg.toFixed(1) : ton.toFixed(3)}</div>
-                    <div class="result-unit">${ton < 1 ? 'kg CO₂e' : 'ton CO₂e'}</div>
-                </div>`;
-        });
-        grid.innerHTML += `
-            <div class="result-item result-item-total">
-                <div class="result-label">Total Emisi</div>
-                <div class="result-value result-value-total">${totalTon.toFixed(3)}</div>
-                <div class="result-unit">ton CO₂e/tahun</div>
-            </div>`;
-    }
+    let gridHTML = items.map((item) => {
+        const ton = item.kg / 1000;
+        return `<div class="result-item">
+            <div class="result-label">${item.label}</div>
+            <div class="result-value">${ton < 1 ? item.kg.toFixed(1) : ton.toFixed(3)}</div>
+            <div class="result-unit">${ton < 1 ? 'kg CO₂e' : 'ton CO₂e'}</div>
+        </div>`;
+    }).join('');
 
-    // Distribution bars
-    const distSec = document.getElementById('distribution-personal');
-    const distBars = document.getElementById('distribution-bars');
-    if (distSec && distBars) {
-        distSec.style.display = 'block';
-        distBars.innerHTML = '';
-        Object.entries(cats).forEach(([label, kg], i) => {
-            const pct = totalKg > 0 ? (kg / totalKg) * 100 : 0;
-            const colors = ['fill-scope1','fill-scope2','fill-scope3','fill-generic','fill-scope1','fill-scope2','fill-scope3'];
-            distBars.innerHTML += `
-                <div class="distribution-row">
-                    <span class="distribution-label" style="min-width:160px;font-size:.72rem">${label}</span>
-                    <div class="distribution-track">
-                        <div class="distribution-fill ${colors[i % colors.length]}" id="dbar_${i}" style="width:0%"></div>
-                    </div>
-                    <span class="distribution-pct">${pct.toFixed(1)}%</span>
-                </div>`;
-        });
-        // Animate
-        requestAnimationFrame(() => {
-            Object.entries(cats).forEach(([, kg], i) => {
-                const pct = totalKg > 0 ? (kg / totalKg) * 100 : 0;
-                setTimeout(() => {
-                    const b = document.getElementById(`dbar_${i}`);
-                    if (b) b.style.width = pct + '%';
-                }, 80 * i);
-            });
-        });
-    }
+    gridHTML += `<div class="result-item result-item-total">
+        <div class="result-label">Total Emisi</div>
+        <div class="result-value result-value-total">${totalTon.toFixed(3)}</div>
+        <div class="result-unit">ton CO₂e/tahun</div>
+    </div>`;
 
-    // Footer
-    const footer = document.getElementById('result-footer-personal');
-    if (footer) {
-        footer.style.display = 'block';
-        const trees = Math.round(totalTon / 0.022);
-        const treeEl = document.getElementById('tree-equivalent');
-        if (treeEl) treeEl.textContent = trees.toLocaleString('id-ID');
-    }
+    const scope1Pct = totalKg > 0 ? ((scope1 / totalKg) * 100).toFixed(1) : 0;
+    const scope2Pct = totalKg > 0 ? ((scope2 / totalKg) * 100).toFixed(1) : 0;
+    const scope3Pct = totalKg > 0 ? ((scope3 / totalKg) * 100).toFixed(1) : 0;
+    const trees = Math.round(totalTon / 0.022);
+    const saveButton = window.CARBON_STORAGE_KEY
+        ? `<button class="btn-calculate" onclick="saveCalculationToDatabase(event)">
+                <i class="fas fa-cloud-upload-alt"></i> Simpan Hasil ke Dashboard
+           </button>`
+        : `<a href="/register" class="btn-calculate result-register-link">
+                <i class="fas fa-user-plus"></i> Daftar Akun untuk Simpan Hasil
+           </a>`;
+
+    box.innerHTML = `
+        <h3 class="result-title"><i class="fas fa-chart-bar"></i> Hasil Kalkulasi Emisi Individu</h3>
+        <div class="result-grid">${gridHTML}</div>
+
+        <div class="distribution-section">
+            <div class="distribution-title">Distribusi Emisi per Scope (GHG Protocol)</div>
+            <div class="distribution-row">
+                <span class="distribution-label">Scope 1</span>
+                <div class="distribution-track"><div class="distribution-fill fill-scope1" id="pbar_s1" style="width:0%"></div></div>
+                <span class="distribution-pct">${scope1Pct}%</span>
+            </div>
+            <div class="distribution-row">
+                <span class="distribution-label">Scope 2</span>
+                <div class="distribution-track"><div class="distribution-fill fill-scope2" id="pbar_s2" style="width:0%"></div></div>
+                <span class="distribution-pct">${scope2Pct}%</span>
+            </div>
+            <div class="distribution-row">
+                <span class="distribution-label">Scope 3</span>
+                <div class="distribution-track"><div class="distribution-fill fill-scope3" id="pbar_s3" style="width:0%"></div></div>
+                <span class="distribution-pct">${scope3Pct}%</span>
+            </div>
+        </div>
+
+        <div class="result-footer">
+            <p class="result-info">
+                Setara dengan <strong>${trees.toLocaleString('id-ID')} pohon</strong> yang harus ditanam untuk offset emisi ini selama 30 tahun.
+            </p>
+        </div>
+
+        <div class="save-action">
+            ${saveButton}
+            <a href="/proyek" class="btn-calculate result-project-link">
+                <i class="fas fa-seedling"></i> Cari Proyek Offset
+            </a>
+            <button class="btn-reset" onclick="resetCalculator()">
+                <i class="fas fa-redo"></i> Hitung Ulang
+            </button>
+        </div>
+
+        <div class="result-disclaimer">
+            <i class="fas fa-info-circle"></i>
+            Kalkulasi menggunakan faktor emisi dari GHG Protocol, ISO 14064-1:2018, IPCC 2006 Guidelines,
+            MEMR Permen 10/2022, dan Pedoman Inventarisasi GRK Nasional Buku II Volume I KLHK 2012.
+        </div>`;
+
+    requestAnimationFrame(() => {
+        [
+            ['pbar_s1', scope1Pct],
+            ['pbar_s2', scope2Pct],
+            ['pbar_s3', scope3Pct],
+        ].forEach(([id, width], index) => {
+            setTimeout(() => {
+                const bar = document.getElementById(id);
+                if (bar) bar.style.width = width + '%';
+            }, 80 * (index + 1));
+        });
+    });
 }
 
 function renderCompanyResult(c, totalKg) {

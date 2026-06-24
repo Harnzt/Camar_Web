@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use App\Http\Controllers\CartController;
 use App\Models\DocumentVerification;
+use App\Models\AdminLoginLog;
 
 class AuthController extends Controller
 {
@@ -210,6 +211,17 @@ class AuthController extends Controller
                 ])->onlyInput('email');
             }
 
+            if (Auth::user()->isAdministrator()) {
+                $loginLog = AdminLoginLog::create([
+                    'admin_id' => Auth::id(),
+                    'session_id' => $request->session()->getId(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'logged_in_at' => now(),
+                ]);
+                $request->session()->put('admin_login_log_id', $loginLog->id);
+            }
+
             // FIX #2: Merge cart dari session (guest) ke DB setelah login
             // Sehingga produk yang ditambahkan sebelum login tidak hilang.
             //app(CartController::class)->mergeSessionCart();
@@ -226,6 +238,17 @@ class AuthController extends Controller
     // LOGOUT
     public function logout(Request $request)
     {
+        $user = Auth::user();
+
+        if ($user?->isAdministrator()) {
+            AdminLoginLog::query()
+                ->where('admin_id', $user->id)
+                ->whereKey($request->session()->get('admin_login_log_id'))
+                ->whereNull('logged_out_at')
+                ->first()
+                ?->update(['logged_out_at' => now()]);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

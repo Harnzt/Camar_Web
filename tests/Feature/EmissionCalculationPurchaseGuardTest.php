@@ -93,3 +93,32 @@ test('buyer dengan kalkulasi emisi dapat menambah proyek ke keranjang', function
 
     expect(session('cart'))->toHaveKey((string) $project->id);
 });
+
+test('kalkulator menyimpan rincian komponen untuk setiap scope', function () {
+    $buyer = createBuyerForPurchaseGuard();
+
+    $this->actingAs($buyer)
+        ->postJson('/calculator/store', [
+            'mode' => 'personal',
+            'total_kg' => 225,
+            'details' => [
+                'energy_rt' => 40,
+                'vehicle' => 60,
+                'electricity' => 50,
+                'transit' => 20,
+                'food' => 30,
+                'water' => 10,
+                'waste' => 15,
+            ],
+        ])
+        ->assertOk()
+        ->assertJson(['success' => true]);
+
+    $calculation = EmissionCalculation::where('user_id', $buyer->id)->latest()->first();
+
+    expect((float) $calculation->scope1_kg)->toBe(100.0)
+        ->and((float) $calculation->scope2_kg)->toBe(50.0)
+        ->and((float) $calculation->scope3_kg)->toBe(75.0)
+        ->and($calculation->scope_details['scope1'][0]['label'])->toBe('Energi rumah tangga')
+        ->and((float) $calculation->scope_details['scope3'][3]['value_kg'])->toBe(15.0);
+});

@@ -66,26 +66,47 @@
              ================================================================ --}}
         @if($userRole === 'personal')
 
+        <div class="calculator-profile-card">
+            <div class="calculator-profile-icon"><i class="fas fa-user"></i></div>
+            <div>
+                <span class="calculator-profile-kicker">Kalkulator Buyer Individu</span>
+                <h2>Hitung emisi berdasarkan GHG Protocol</h2>
+                <p>Isi aktivitas pada setiap scope, lalu tinjau hasil dan simpan kalkulasi ke dashboard buyer.</p>
+            </div>
+            <span class="calculator-profile-status"><i class="fas fa-shield-alt"></i> Data tersimpan aman</span>
+        </div>
+
         {{-- Step Tab Nav: Personal --}}
         <div class="step-tab-nav" id="personalNav">
-            <button class="step-tab-btn active" data-step="p1" onclick="switchTab('p',1,3)">
+            <button class="step-tab-btn active" data-step="p1" onclick="switchTab('p',1,4)">
                 <span class="tab-number">1</span>
-                <span class="tab-label">Energi & Kendaraan</span>
+                <span class="tab-label">Scope 1</span>
             </button>
             <div class="tab-connector"></div>
-            <button class="step-tab-btn" data-step="p2" onclick="switchTab('p',2,3)">
+            <button class="step-tab-btn" data-step="p2" onclick="switchTab('p',2,4)">
                 <span class="tab-number">2</span>
-                <span class="tab-label">Transportasi</span>
+                <span class="tab-label">Scope 2</span>
             </button>
             <div class="tab-connector"></div>
-            <button class="step-tab-btn" data-step="p3" onclick="switchTab('p',3,3)">
+            <button class="step-tab-btn" data-step="p3" onclick="switchTab('p',3,4)">
                 <span class="tab-number">3</span>
-                <span class="tab-label">Pangan & Sampah</span>
+                <span class="tab-label">Scope 3</span>
+            </button>
+            <div class="tab-connector"></div>
+            <button class="step-tab-btn" data-step="p4" onclick="switchTab('p',4,4)">
+                <span class="tab-number">4</span>
+                <span class="tab-label">Hasil</span>
             </button>
         </div>
 
         {{-- ── PERSONAL STEP 1: ENERGI & KENDARAAN ── --}}
         <div class="step-pane active" id="p-step-1">
+
+            <div class="scope-label-banner scope1-banner">
+                <i class="fas fa-fire"></i>
+                Scope 1 — Emisi Langsung
+                <span>Energi rumah tangga dan kendaraan yang Anda gunakan langsung</span>
+            </div>
 
             {{-- ENERGI RUMAH TANGGA --}}
             <div class="calc-module">
@@ -261,14 +282,22 @@
             {{-- STEP NAV --}}
             <div class="step-pane-nav">
                 <div></div>
-                <button class="btn-step-next" onclick="switchTab('p',2,3)">
-                    Transportasi & Konsumsi <i class="fas fa-arrow-right"></i>
+                <button class="btn-step-next" onclick="switchTab('p',2,4)">
+                    Scope 2 — Listrik <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </div>
 
         {{-- ── PERSONAL STEP 2: TRANSPORTASI UMUM ── --}}
         <div class="step-pane" id="p-step-2">
+
+            <div class="scope-label-banner scope2-banner">
+                <i class="fas fa-bolt"></i>
+                Scope 2 — Emisi Tidak Langsung Energi
+                <span>Emisi yang berasal dari konsumsi listrik jaringan</span>
+            </div>
+
+            <div id="personal-scope2-modules"></div>
 
             <div class="calc-module">
                 <div class="module-header" onclick="toggleModule('p_transit')">
@@ -331,17 +360,25 @@
             </div>
 
             <div class="step-pane-nav">
-                <button class="btn-step-prev" onclick="switchTab('p',1,3)">
-                    <i class="fas fa-arrow-left"></i> Energi & Kendaraan
+                <button class="btn-step-prev" onclick="switchTab('p',1,4)">
+                    <i class="fas fa-arrow-left"></i> Scope 1
                 </button>
-                <button class="btn-step-next" onclick="switchTab('p',3,3)">
-                    Pangan & Sampah <i class="fas fa-arrow-right"></i>
+                <button class="btn-step-next" onclick="switchTab('p',3,4)">
+                    Scope 3 <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </div>
 
         {{-- ── PERSONAL STEP 3: PANGAN & SAMPAH ── --}}
         <div class="step-pane" id="p-step-3">
+
+            <div class="scope-label-banner scope3-banner">
+                <i class="fas fa-globe"></i>
+                Scope 3 — Emisi Tidak Langsung Lainnya
+                <span>Transportasi, konsumsi pangan, penggunaan air, dan limbah</span>
+            </div>
+
+            <div id="personal-scope3-modules"></div>
 
             {{-- PANGAN --}}
             <div class="calc-module">
@@ -490,8 +527,8 @@
             </div>
 
             <div class="step-pane-nav">
-                <button class="btn-step-prev" onclick="switchTab('p',2,3)">
-                    <i class="fas fa-arrow-left"></i> Transportasi
+                <button class="btn-step-prev" onclick="switchTab('p',2,4)">
+                    <i class="fas fa-arrow-left"></i> Scope 2
                 </button>
                 <div></div>
             </div>
@@ -1064,6 +1101,12 @@
         {{-- ── SHARED RESULT BOX (personal) ───────────────────────────── --}}
         @if($userRole === 'personal')
 {{-- ── SHARED RESULT BOX (Dinamis & Interaktif) ───────────────────────────── --}}
+        <div class="step-pane" id="p-step-4">
+        <div class="scope-label-banner result-banner">
+            <i class="fas fa-chart-bar"></i>
+            Hasil Kalkulasi Emisi Individu
+            <span>Ringkasan tahunan berdasarkan seluruh data Scope 1, 2, dan 3</span>
+        </div>
         <div class="result-box" id="result-box" style="display:none; margin-top: 30px;">
             <h3 class="result-title"><i class="fas fa-chart-bar"></i> Hasil Kalkulasi Emisi Anda</h3>
 
@@ -1124,6 +1167,13 @@
                 <i class="fas fa-info-circle"></i>
                 Kalkulasi menggunakan faktor emisi dari GHG Protocol, ISO 14064-1:2018, IPCC 2006 Guidelines, dan Pedoman Inventarisasi GRK Nasional Buku II Volume I KLHK 2012.
             </div>
+        </div>
+        <div class="step-pane-nav">
+            <button class="btn-step-prev" onclick="switchTab('p',3,4)">
+                <i class="fas fa-arrow-left"></i> Scope 3
+            </button>
+            <div></div>
+        </div>
         </div>
         @endif
 

@@ -8,7 +8,9 @@ class EmissionCalculation extends Model
 {
     protected $fillable = [
         'user_id',
+        'calculation_mode',
         'scope1_kg', 'scope2_kg', 'scope3_kg',
+        'scope_details',
         'total_kg', 'total_ton',
         'fuel_consumption', 'fuel_factor',
         'electricity_consumption', 'electricity_factor',
@@ -20,6 +22,7 @@ class EmissionCalculation extends Model
 
     protected $casts = [
         'is_offset' => 'boolean',
+        'scope_details' => 'array',
     ];
 
     // Relasi ke user

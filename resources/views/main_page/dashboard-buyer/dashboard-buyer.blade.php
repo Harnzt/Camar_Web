@@ -206,9 +206,16 @@
                     <h2 class="panel-title">
                         <i class="fas fa-layer-group"></i> Rincian Emisi per Scope
                     </h2>
-                    <span class="panel-date">
-                        {{ $emission ? $emission->created_at->format('d M Y') : 'Belum ada data' }}
-                    </span>
+                    <div class="scope-header-actions">
+                        <span class="panel-date">
+                            {{ $emission ? $emission->created_at->format('d M Y') : 'Belum ada data' }}
+                        </span>
+                        @if($emission && !empty($emission->scope_details))
+                            <button type="button" class="scope-detail-button" data-open-scope-detail>
+                                <i class="fas fa-list-ul"></i> Lihat Detail
+                            </button>
+                        @endif
+                    </div>
                 </div>
                 <div class="panel-body">
                     @if($emission)
@@ -217,6 +224,7 @@
                             $s2   = $emission->scope2_kg ?? 0; 
                             $s3   = $emission->scope3_kg ?? 0; 
                             $tot  = $emission->total_kg  ?? 0;
+                            $scopeDetails = $emission->scope_details ?? [];
                             
                             $pct1 = $tot > 0 ? ($s1 / $tot * 100) : 0;
                             $pct2 = $tot > 0 ? ($s2 / $tot * 100) : 0;
@@ -287,6 +295,60 @@
         {{-- =====================================================
              ROW 3 — Riwayat Transaksi + Sertifikat
              ===================================================== --}}
+        @if($emission && !empty($scopeDetails))
+            <dialog class="scope-detail-modal" id="scope-detail-modal">
+                <div class="scope-detail-modal-card">
+                    <div class="scope-detail-modal-header">
+                        <div>
+                            <span class="scope-modal-kicker">Kalkulasi {{ $emission->created_at->format('d M Y') }}</span>
+                            <h3>Detail Rincian Emisi</h3>
+                        </div>
+                        <button type="button" class="scope-modal-close" data-close-scope-detail aria-label="Tutup">
+                            <i class="fas fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="scope-detail-modal-body">
+                        @foreach([
+                            ['key' => 'scope1', 'badge' => 'S1', 'class' => 's1', 'title' => 'Emisi Langsung', 'total' => $s1],
+                            ['key' => 'scope2', 'badge' => 'S2', 'class' => 's2', 'title' => 'Energi Tidak Langsung', 'total' => $s2],
+                            ['key' => 'scope3', 'badge' => 'S3', 'class' => 's3', 'title' => 'Emisi Lainnya', 'total' => $s3],
+                        ] as $scope)
+                            <section class="scope-modal-section">
+                                <div class="scope-modal-section-header">
+                                    <div class="scope-badge {{ $scope['class'] }}">{{ $scope['badge'] }}</div>
+                                    <div>
+                                        <strong>{{ $scope['title'] }}</strong>
+                                        <span>{{ number_format($scope['total'], 1) }} kg CO₂</span>
+                                    </div>
+                                </div>
+                                <div class="scope-modal-rows">
+                                    @forelse($scopeDetails[$scope['key']] ?? [] as $detail)
+                                        <div class="scope-modal-row">
+                                            <span>{{ $detail['label'] }}</span>
+                                            <strong>{{ number_format((float) $detail['value_kg'], 1) }} kg CO₂</strong>
+                                        </div>
+                                    @empty
+                                        <div class="scope-modal-row empty">
+                                            <span>Rincian komponen belum tersedia.</span>
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </section>
+                        @endforeach
+                    </div>
+
+                    <div class="scope-detail-modal-footer">
+                        <div>
+                            <span>Total Emisi</span>
+                            <strong>{{ number_format($tot, 1) }} kg CO₂</strong>
+                        </div>
+                        <button type="button" class="scope-modal-done" data-close-scope-detail>Tutup</button>
+                    </div>
+                </div>
+            </dialog>
+        @endif
+
         <div class="dashboard-row row-three">
 
             <div class="panel panel-transactions">

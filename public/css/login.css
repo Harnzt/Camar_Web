@@ -364,6 +364,14 @@
     font-size: 1.5rem;
 }
 
+/* Sembunyikan ikon reveal password bawaan Microsoft Edge.
+   Tombol .password-toggle tetap menjadi satu-satunya ikon mata. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+
 /* Responsive */
 @media (max-width: 991px) {
     .login-container {

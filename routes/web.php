@@ -147,6 +147,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])
                 ->name('admins.store');
             Route::patch('/administrators/{admin}', [AdminManagementController::class, 'update'])
                 ->name('admins.update');
+            Route::patch('/administrators/{admin}/status', [AdminManagementController::class, 'updateStatus'])
+                ->name('admins.status');
+            Route::patch('/administrators/{admin}/password', [AdminManagementController::class, 'updatePassword'])
+                ->name('admins.password');
+            Route::get('/administrators/{admin}/login-logs', [AdminManagementController::class, 'loginLogs'])
+                ->name('admins.login-logs');
+            Route::delete('/administrators/{admin}', [AdminManagementController::class, 'destroy'])
+                ->name('admins.destroy');
         });
 
         Route::middleware(['role:super_admin', 'permission:permissions.manage'])->group(function () {
