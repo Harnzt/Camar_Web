@@ -1,18 +1,18 @@
 @extends('main_page.admin-panel.layout')
 
-@section('title', 'Kelola Admin')
-@section('page-title', 'Kelola Administrator')
+@section('title', "Kelola {$managedAccountLabel}")
+@section('page-title', "Kelola {$managedAccountLabel}")
 
 @section('content')
 <section class="admin-manager">
     <div class="admin-manager-toolbar">
         <div>
             <span class="panel-kicker">Kontrol akses</span>
-            <h2>Daftar Administrator</h2>
-            <p>Kelola profil, status akses, password, dan riwayat login administrator CAMAR.</p>
+            <h2>Daftar {{ $managedAccountLabel }}</h2>
+            <p>Kelola profil, status akses, password, dan riwayat login akun {{ strtolower($managedAccountLabel) }} CAMAR.</p>
         </div>
         <button type="button" class="btn btn-primary" data-open-modal="create-admin-modal">
-            <i class="fas fa-plus"></i> Tambah Admin
+            <i class="fas fa-plus"></i> Tambah {{ $managedAccountLabel }}
         </button>
     </div>
 
@@ -23,7 +23,7 @@
             name="search"
             value="{{ request('search') }}"
             placeholder="Cari nama, email, atau role..."
-            aria-label="Cari administrator"
+            aria-label="Cari {{ strtolower($managedAccountLabel) }}"
         >
         @if(request('search'))
             <a href="{{ route('admin.admins.index') }}" aria-label="Hapus pencarian">
@@ -37,7 +37,7 @@
         <table class="admin-management-table">
             <thead>
                 <tr>
-                    <th>Administrator</th>
+                    <th>Akun</th>
                     <th>Role</th>
                     <th>Login Terakhir</th>
                     <th>Status</th>
@@ -134,7 +134,7 @@
                         <td colspan="5">
                             <div class="admin-empty">
                                 <i class="fas fa-user-shield"></i>
-                                <strong>Administrator tidak ditemukan</strong>
+                                <strong>{{ $managedAccountLabel }} tidak ditemukan</strong>
                                 <span>Coba ubah kata kunci pencarian atau tambahkan akun baru.</span>
                             </div>
                         </td>
@@ -151,13 +151,13 @@
     <form method="POST" action="{{ route('admin.admins.store') }}" class="admin-modal-card">
         @csrf
         <div class="admin-modal-header">
-            <div><span class="panel-kicker">Akun baru</span><h3>Tambah Administrator</h3></div>
+            <div><span class="panel-kicker">Akun baru</span><h3>Tambah {{ $managedAccountLabel }}</h3></div>
             <button type="button" class="modal-close" data-close-modal><i class="fas fa-xmark"></i></button>
         </div>
         <div class="admin-modal-body">
             <div class="field-group">
                 <label for="create-name">Nama lengkap</label>
-                <input id="create-name" name="name" required maxlength="100" value="{{ old('name') }}" placeholder="Nama administrator">
+                <input id="create-name" name="name" required maxlength="100" value="{{ old('name') }}" placeholder="Nama {{ strtolower($managedAccountLabel) }}">
             </div>
             <div class="field-group">
                 <label for="create-email">Email</label>
@@ -166,8 +166,9 @@
             <div class="field-group">
                 <label for="create-role">Role</label>
                 <select id="create-role" name="role" required>
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Super Admin</option>
+                    @foreach($managedRoleOptions as $value => $label)
+                        <option value="{{ $value }}" @selected(old('role') === $value)>{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
             <div class="field-group">
@@ -191,7 +192,7 @@
         @csrf
         @method('PATCH')
         <div class="admin-modal-header">
-            <div><span class="panel-kicker">Ubah akun</span><h3 id="edit-admin-title">Edit Administrator</h3></div>
+            <div><span class="panel-kicker">Ubah akun</span><h3 id="edit-admin-title">Edit {{ $managedAccountLabel }}</h3></div>
             <button type="button" class="modal-close" data-close-modal><i class="fas fa-xmark"></i></button>
         </div>
         <div class="admin-modal-body">
@@ -206,8 +207,9 @@
             <div class="field-group">
                 <label for="edit-role">Role</label>
                 <select id="edit-role" name="role" required>
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Super Admin</option>
+                    @foreach($managedRoleOptions as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
         </div>

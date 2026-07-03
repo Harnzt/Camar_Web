@@ -116,6 +116,11 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isAuditor(): bool
+    {
+        return $this->role === 'auditor';
+    }
+
     public function isSuperAdmin(): bool
     {
         return $this->role === 'super_admin';
@@ -123,7 +128,7 @@ class User extends Authenticatable
 
     public function isAdministrator(): bool
     {
-        return in_array($this->role, ['admin', 'super_admin'], true);
+        return in_array($this->role, ['admin', 'auditor', 'super_admin'], true);
     }
 
     public function isCompany(): bool
@@ -146,6 +151,7 @@ class User extends Authenticatable
         return match ($this->role) {
             'buyer' => 'Buyer',
             'seller' => 'Seller',
+            'auditor' => 'Auditor',
             'admin' => 'Admin',
             'super_admin' => 'Super Admin',
             default => 'User',
@@ -243,10 +249,6 @@ class User extends Authenticatable
 
     public function hasPermission(string $permission): bool
     {
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
         return Permission::query()
             ->where('slug', $permission)
             ->whereHas('roles', fn ($query) => $query->where('slug', $this->role))

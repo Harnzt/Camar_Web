@@ -227,7 +227,7 @@ class AuthController extends Controller
             //app(CartController::class)->mergeSessionCart();
 
             return redirect()->intended(match (Auth::user()->role) {
-                'admin', 'super_admin' => route('admin.dashboard'),
+                'admin', 'auditor', 'super_admin' => route('admin.dashboard'),
                 'seller' => route('seller.dashboard'),
                 default => route('dashboard'),
             });

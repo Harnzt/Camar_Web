@@ -311,6 +311,10 @@
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: .875rem; flex: 1;
 }
+[data-group="p_flight"] .entry-fields,
+[data-group="c_flight"] .entry-fields {
+    grid-template-columns: minmax(130px, .8fr) minmax(110px, .6fr) repeat(2, minmax(190px, 1.2fr)) minmax(150px, .8fr) minmax(160px, .9fr);
+}
 
 /* ── INPUT GROUP ─────────────────────────────────────────────────────── */
 .input-group { display: flex; flex-direction: column; gap: .35rem; }
@@ -547,6 +551,8 @@
     .step-tab-nav { flex-wrap: wrap; gap: .5rem; }
     .tab-connector { display: none; }
     .entry-fields { grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); }
+    [data-group="p_flight"] .entry-fields,
+    [data-group="c_flight"] .entry-fields { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 }
 @media (max-width: 768px) {
     .calculator-hero-title { font-size: 1.875rem; }
@@ -562,6 +568,8 @@
 }
 @media (max-width: 480px) {
     .entry-fields { grid-template-columns: 1fr; }
+    [data-group="p_flight"] .entry-fields,
+    [data-group="c_flight"] .entry-fields { grid-template-columns: 1fr; }
     .result-grid { grid-template-columns: 1fr 1fr; }
     .step-tab-btn { padding: .5rem .875rem; }
     .tab-label { font-size: .78rem; }

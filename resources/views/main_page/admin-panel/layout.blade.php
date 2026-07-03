@@ -39,11 +39,13 @@
                 </a>
             @endif
 
-            @if(Auth::user()->isSuperAdmin())
-                <div class="admin-nav-label">Super Admin</div>
+            @if(Auth::user()->hasPermission('admins.manage'))
+                <div class="admin-nav-label">{{ Auth::user()->isSuperAdmin() ? 'Super Admin' : 'Admin' }}</div>
                 <a href="{{ route('admin.admins.index') }}" class="{{ request()->routeIs('admin.admins.*') ? 'active' : '' }}">
-                    <i class="fas fa-user-shield"></i><span>Kelola Admin</span>
+                    <i class="fas fa-user-shield"></i><span>{{ Auth::user()->isSuperAdmin() ? 'Kelola Admin' : 'Kelola Auditor' }}</span>
                 </a>
+            @endif
+            @if(Auth::user()->hasPermission('permissions.manage'))
                 <a href="{{ route('admin.roles.index') }}" class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
                     <i class="fas fa-key"></i><span>Role & Permission</span>
                 </a>

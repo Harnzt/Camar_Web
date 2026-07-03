@@ -186,7 +186,7 @@
 .admin-management-table tbody tr{transition:background .15s}.admin-management-table tbody tr:hover{background:#fbfdfd}.actions-heading{text-align:right}
 .admin-identity{display:flex;align-items:center;gap:12px}.admin-identity img{width:44px;height:44px;border-radius:12px;object-fit:cover}.admin-identity strong,.admin-identity span,.admin-identity small{display:block}
 .admin-identity span{font-size:12px;color:var(--muted);margin-top:3px}.admin-identity small{color:#16805a;font-weight:700;margin-top:3px}
-.role-chip{display:inline-flex;padding:6px 10px;border-radius:8px;background:#eaf2fb;color:#245d94;font-size:11px;font-weight:800}.role-chip.super_admin{background:#eee9ff;color:#6542a5}
+.role-chip{display:inline-flex;padding:6px 10px;border-radius:8px;background:#eaf2fb;color:#245d94;font-size:11px;font-weight:800}.role-chip.super_admin{background:#eee9ff;color:#6542a5}.role-chip.auditor{background:#e2f7ec;color:#17724d}
 .login-date{display:block;font-size:13px}.status-toggle-form{display:flex;align-items:center;gap:9px}.status-toggle-form>span{font-size:12px;color:var(--muted);font-weight:700}
 .status-toggle{width:42px;height:23px;border:0;border-radius:999px;background:#cbd5df;padding:3px;cursor:pointer;transition:.2s}.status-toggle span{display:block;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.22);transition:.2s}
 .status-toggle.is-active{background:#55b879}.status-toggle.is-active span{transform:translateX(19px)}.status-toggle:disabled{opacity:.55;cursor:not-allowed}

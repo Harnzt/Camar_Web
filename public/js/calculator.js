@@ -102,6 +102,110 @@ function getTransitEF(key) { return EF_DB.transit[key] || null; }
 function getTrainEF(key)   { return EF_DB.train[key] || null; }
 function getFoodEF(key)    { return EF_DB.food[key] || null; }
 
+const AIRPORTS = Array.isArray(window.AIRPORTS_DATA) ? window.AIRPORTS_DATA : [];
+const AIRPORT_LOOKUP = {
+    byCode: new Map(),
+    byName: new Map(),
+    byDisplay: new Map(),
+};
+
+AIRPORTS.forEach((airport) => {
+    const code = String(airport.iata_code || '').trim().toUpperCase();
+    const name = String(airport.name || '').trim();
+    if (!code || !name) return;
+
+    const normalisedAirport = {
+        ...airport,
+        iata_code: code,
+        name,
+        latitude_deg: parseFloat(airport.latitude_deg),
+        longitude_deg: parseFloat(airport.longitude_deg),
+    };
+    const display = `${code} - ${name}`;
+
+    AIRPORT_LOOKUP.byCode.set(code, normalisedAirport);
+    AIRPORT_LOOKUP.byName.set(name.toLowerCase(), normalisedAirport);
+    AIRPORT_LOOKUP.byDisplay.set(display.toLowerCase(), normalisedAirport);
+});
+
+function findAirport(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+
+    const code = raw.toUpperCase();
+    if (AIRPORT_LOOKUP.byCode.has(code)) return AIRPORT_LOOKUP.byCode.get(code);
+
+    const lower = raw.toLowerCase();
+    if (AIRPORT_LOOKUP.byName.has(lower)) return AIRPORT_LOOKUP.byName.get(lower);
+    if (AIRPORT_LOOKUP.byDisplay.has(lower)) return AIRPORT_LOOKUP.byDisplay.get(lower);
+
+    const codePrefix = raw.split('-')[0]?.trim().toUpperCase();
+    if (AIRPORT_LOOKUP.byCode.has(codePrefix)) return AIRPORT_LOOKUP.byCode.get(codePrefix);
+
+    return null;
+}
+
+function normaliseAirportField(input) {
+    const airport = findAirport(input?.value);
+    if (airport && input) input.value = airport.iata_code;
+    return airport;
+}
+
+function normaliseAllAirportFields() {
+    document.querySelectorAll('.airport-input').forEach(normaliseAirportField);
+}
+
+function haversineKm(origin, destination) {
+    const toRad = (deg) => deg * Math.PI / 180;
+    const lat1 = toRad(origin.latitude_deg);
+    const lat2 = toRad(destination.latitude_deg);
+    const dLat = toRad(destination.latitude_deg - origin.latitude_deg);
+    const dLon = toRad(destination.longitude_deg - origin.longitude_deg);
+    const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+
+    return 6371.0088 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function updateFlightRoute(inputOrRow) {
+    const row = inputOrRow?.classList?.contains('entry-row')
+        ? inputOrRow
+        : inputOrRow?.closest?.('.entry-row');
+    if (!row) return 0;
+
+    const group = row.dataset.group;
+    const originInput = row.querySelector(`[name="${group}_origin[]"]`);
+    const destinationInput = row.querySelector(`[name="${group}_destination[]"]`);
+    const distanceInput = row.querySelector(`[name="${group}_km[]"]`);
+    const hint = row.querySelector('.flight-distance-hint');
+    const origin = findAirport(originInput?.value);
+    const destination = findAirport(destinationInput?.value);
+
+    if (!distanceInput) return 0;
+
+    if (!origin || !destination) {
+        distanceInput.value = '';
+        if (hint) hint.textContent = 'Pilih asal dan tujuan bandara';
+        return 0;
+    }
+
+    if (origin.iata_code === destination.iata_code) {
+        distanceInput.value = '0';
+        if (hint) hint.textContent = `${origin.iata_code} ke ${destination.iata_code}`;
+        return 0;
+    }
+
+    const distance = haversineKm(origin, destination);
+    distanceInput.value = distance.toFixed(2);
+    if (hint) hint.textContent = `${origin.iata_code} ke ${destination.iata_code}`;
+
+    return distance;
+}
+
+function updateAllFlightRoutes() {
+    document.querySelectorAll('[data-group="p_flight"], [data-group="c_flight"]').forEach(updateFlightRoute);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -188,14 +292,14 @@ function organisePersonalCalculator() {
     const scope2Slot = document.getElementById('personal-scope2-modules');
     const scope3Slot = document.getElementById('personal-scope3-modules');
     const electricityModule = document.getElementById('p_electricity-content')?.closest('.calc-module');
-    const transitModule = document.getElementById('p_transit-content')?.closest('.calc-module');
+    const flightModule = document.getElementById('p_flight-content')?.closest('.calc-module');
 
     if (scope2Slot && electricityModule) {
         scope2Slot.appendChild(electricityModule);
     }
 
-    if (scope3Slot && transitModule) {
-        scope3Slot.appendChild(transitModule);
+    if (scope3Slot && flightModule) {
+        scope3Slot.appendChild(flightModule);
     }
 }
 
@@ -210,6 +314,7 @@ function addRow(group) {
     // Reset values
     newRow.querySelectorAll('input').forEach(i => i.value = '');
     newRow.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+    newRow.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
     newRow.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
 
     container.appendChild(newRow);
@@ -224,6 +329,7 @@ function removeRow(btn) {
         // Reset instead of remove
         row.querySelectorAll('input').forEach(i => i.value = '');
         row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+        row.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
         row.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
     } else {
         row.remove();
@@ -250,6 +356,7 @@ function updateEfChip(selectEl, group) {
     else if (group === 'c_train')                    efData = getTrainEF(val);
     else if (group === 'p_energy')                   efData = getFuelEF(val);
     else if (group === 'p_food')                     efData = getFoodEF(val);
+    else if (group === 'p_flight')                   efData = getTransitEF(val);
     else if (group === 'p_transit')                  efData = getTransitEF(val);
 
     if (efData) {
@@ -275,19 +382,21 @@ function updateVehicleFuel(typeSelect) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function calcLive() {
+    updateAllFlightRoutes();
+
     // Run full calc quietly and update previews
     const r = calcPersonalAll();
     setPreview('p_energy',      r.energy_rt);
     setPreview('p_vehicle',     r.vehicle);
     setPreview('p_electricity', r.electricity);
-    setPreview('p_transit',     r.transit);
+    setPreview('p_flight',      r.flight);
     setPreview('p_food',        r.food);
     setPreview('p_water',       r.water);
     setPreview('p_waste',       r.waste);
     setSub('p_energy',      r.energy_rt);
     setSub('p_electricity', r.electricity);
     setSub('p_vehicle',     r.vehicle);
-    setSub('p_transit',     r.transit);
+    setSub('p_flight',      r.flight);
     setSub('p_food',        r.food);
     setSub('p_water',       r.water);
     setSub('p_waste',       r.waste);
@@ -360,11 +469,11 @@ function calcPersonalAll() {
     // Listrik (monthly kWh × 12 × 0.8099)
     const electricity = v('p_elec_kwh') * 12 * EF_DB.grid.household.ef;
 
-    // Transportasi umum (per-trip, km × ef)
-    let transit = 0;
-    rowPairs('p_transit_mode','p_transit_km').forEach(([mode, km]) => {
-        const ef = getTransitEF(mode);
-        if (ef) transit += km * ef.ef;
+    // Penerbangan (pax x km x ef)
+    let flight = 0;
+    rowTriples('p_flight_class','p_flight_pax','p_flight_km').forEach(([cls, pax, km]) => {
+        const ef = getTransitEF(cls);
+        if (ef) flight += pax * km * ef.ef;
     });
 
     // Pangan (monthly × 12)
@@ -380,7 +489,7 @@ function calcPersonalAll() {
     // Sampah (monthly × 12)
     const waste = v('p_waste_kg') * 12 * EF_DB.waste.ef;
 
-    return { energy_rt, vehicle, electricity, transit, food, water, waste };
+    return { energy_rt, vehicle, electricity, flight, food, water, waste };
 }
 
 // ── Company totals ─────────────────────────────────────────────────────────────
@@ -447,6 +556,8 @@ function calcCompanyAll() {
 // Pastikan fungsi ini ada dan tidak terbungkus di dalam const atau let yang tertutup
     function calculateAll(mode) {
         console.log("Tombol hitung ditekan, mode:", mode);
+        normaliseAllAirportFields();
+        updateAllFlightRoutes();
         
         // 1. Ambil data kalkulasi
         let totalKg = 0;
@@ -513,12 +624,12 @@ function renderPersonalResult(cats, totalKg) {
     const totalTon = totalKg / 1000;
     const scope1 = cats.energy_rt + cats.vehicle;
     const scope2 = cats.electricity;
-    const scope3 = cats.transit + cats.food + cats.water + cats.waste;
+    const scope3 = cats.flight + cats.food + cats.water + cats.waste;
     const items = [
         { label: 'Scope 1 — Energi Rumah Tangga', kg: cats.energy_rt },
         { label: 'Scope 1 — Kendaraan Pribadi', kg: cats.vehicle },
         { label: 'Scope 2 — Listrik', kg: cats.electricity },
-        { label: 'Scope 3 — Transportasi', kg: cats.transit },
+        { label: 'Scope 3 — Penerbangan', kg: cats.flight },
         { label: 'Scope 3 — Pangan', kg: cats.food },
         { label: 'Scope 3 — Air Bersih', kg: cats.water },
         { label: 'Scope 3 — Limbah', kg: cats.waste },
@@ -622,7 +733,7 @@ function renderCompanyResult(c, totalKg) {
         { label: 'Scope 1 — Stasioner', kg: c.stat, cls: 'fill-scope1' },
         { label: 'Scope 1 — Bergerak',  kg: c.mobile, cls: 'fill-scope1' },
         { label: 'Scope 2 — Listrik',   kg: c.elec,   cls: 'fill-scope2' },
-        { label: 'Scope 3 — Pesawat',   kg: c.flight, cls: 'fill-scope3' },
+        { label: 'Scope 3 — Penerbangan Dinas', kg: c.flight, cls: 'fill-scope3' },
         { label: 'Scope 3 — Hotel',     kg: c.hotel,  cls: 'fill-scope3' },
         { label: 'Scope 3 — Kereta',    kg: c.train,  cls: 'fill-scope3' },
     ];
@@ -722,6 +833,7 @@ function resetCalculator() {
         if (el.tagName === 'SELECT') el.selectedIndex = 0;
         else el.value = '';
     });
+    document.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
     document.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
     document.querySelectorAll('.preview-value').forEach(el => el.textContent = '0');
 
@@ -1054,6 +1166,8 @@ window.addRow         = addRow;
 window.removeRow      = removeRow;
 window.updateEfChip   = updateEfChip;
 window.updateVehicleFuel = updateVehicleFuel;
+window.normaliseAirportField = normaliseAirportField;
+window.updateFlightRoute = updateFlightRoute;
 window.calcLive       = calcLive;
 window.calculateAll   = calculateAll;
 window.resetCalculator = resetCalculator;

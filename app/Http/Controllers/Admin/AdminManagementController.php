@@ -22,7 +22,7 @@ class AdminManagementController extends Controller
         $search = trim((string) $request->query('search'));
 
         $admins = User::query()
-            ->whereIn('role', ['admin', 'super_admin'])
+            ->whereIn('role', $this->manageableRoles())
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
@@ -35,7 +35,11 @@ class AdminManagementController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('main_page.admin-panel.admins.index', compact('admins'));
+        return view('main_page.admin-panel.admins.index', [
+            'admins' => $admins,
+            'managedAccountLabel' => $this->managedAccountLabel(),
+            'managedRoleOptions' => $this->managedRoleOptions(),
+        ]);
     }
 
     public function store(Request $request)
@@ -43,7 +47,7 @@ class AdminManagementController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', Rule::in(['admin', 'super_admin'])],
+            'role' => ['required', Rule::in($this->manageableRoles())],
             'password' => ['required', Password::min(8)],
         ]);
 
@@ -58,28 +62,24 @@ class AdminManagementController extends Controller
 
         $this->audit->log(
             'admin.created',
-            "Akun {$admin->role} {$admin->email} dibuat.",
+            "Akun {$admin->role_label} {$admin->email} dibuat.",
             $admin,
             [],
             $admin->only(['name', 'email', 'role', 'status'])
         );
 
-        return back()->with('success', 'Akun administrator berhasil dibuat.');
+        return back()->with('success', "Akun {$admin->role_label} berhasil dibuat.");
     }
 
     public function update(Request $request, User $admin)
     {
-        $this->ensureAdministrator($admin);
+        $this->ensureManageableAccount($admin);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($admin->id)],
-            'role' => ['required', Rule::in(['admin', 'super_admin'])],
+            'role' => ['required', Rule::in($this->manageableRoles())],
         ]);
-
-        if ($admin->isSuperAdmin() && $validated['role'] !== 'super_admin' && $this->isLastSuperAdmin($admin)) {
-            return back()->withErrors(['role' => 'Super admin terakhir tidak dapat diturunkan menjadi admin.']);
-        }
 
         $old = $admin->only(['name', 'email', 'role']);
         $admin->fill([
@@ -102,19 +102,11 @@ class AdminManagementController extends Controller
 
     public function updateStatus(Request $request, User $admin)
     {
-        $this->ensureAdministrator($admin);
+        $this->ensureManageableAccount($admin);
 
         $validated = $request->validate([
             'status' => ['required', Rule::in(['verified', 'suspended'])],
         ]);
-
-        if ($admin->is(auth()->user()) && $validated['status'] === 'suspended') {
-            return back()->withErrors(['status' => 'Anda tidak dapat menonaktifkan akun sendiri.']);
-        }
-
-        if ($validated['status'] === 'suspended' && $admin->isSuperAdmin() && $this->isLastActiveSuperAdmin($admin)) {
-            return back()->withErrors(['status' => 'Super admin aktif terakhir tidak dapat dinonaktifkan.']);
-        }
 
         $old = $admin->only(['status', 'suspended_at', 'suspension_reason']);
         $admin->update([
@@ -138,7 +130,7 @@ class AdminManagementController extends Controller
 
     public function updatePassword(Request $request, User $admin)
     {
-        $this->ensureAdministrator($admin);
+        $this->ensureManageableAccount($admin);
 
         $validated = $request->validate([
             'password' => ['required', 'confirmed', Password::min(8)],
@@ -157,7 +149,7 @@ class AdminManagementController extends Controller
 
     public function loginLogs(User $admin): JsonResponse
     {
-        $this->ensureAdministrator($admin);
+        $this->ensureManageableAccount($admin);
 
         $logs = $admin->adminLoginLogs()
             ->latest('logged_in_at')
@@ -178,15 +170,7 @@ class AdminManagementController extends Controller
 
     public function destroy(User $admin)
     {
-        $this->ensureAdministrator($admin);
-
-        if ($admin->is(auth()->user())) {
-            return back()->withErrors(['delete' => 'Anda tidak dapat menghapus akun sendiri.']);
-        }
-
-        if ($admin->isSuperAdmin() && $this->isLastSuperAdmin($admin)) {
-            return back()->withErrors(['delete' => 'Super admin terakhir tidak dapat dihapus.']);
-        }
+        $this->ensureManageableAccount($admin);
 
         $snapshot = $admin->only(['name', 'email', 'role', 'status']);
         $this->audit->log(
@@ -200,26 +184,34 @@ class AdminManagementController extends Controller
         return back()->with('success', 'Akun administrator berhasil dihapus.');
     }
 
-    private function ensureAdministrator(User $admin): void
+    private function ensureManageableAccount(User $admin): void
     {
-        abort_unless($admin->isAdministrator(), 404);
+        abort_unless(in_array($admin->role, $this->manageableRoles(), true), 404);
     }
 
-    private function isLastSuperAdmin(User $admin): bool
+    private function manageableRoles(): array
     {
-        return User::query()
-            ->where('role', 'super_admin')
-            ->whereKeyNot($admin->id)
-            ->doesntExist();
+        return match (auth()->user()?->role) {
+            'super_admin' => ['admin'],
+            'admin' => ['auditor'],
+            default => [],
+        };
     }
 
-    private function isLastActiveSuperAdmin(User $admin): bool
+    private function managedRoleOptions(): array
     {
-        return User::query()
-            ->where('role', 'super_admin')
-            ->where('status', 'verified')
-            ->whereKeyNot($admin->id)
-            ->doesntExist();
+        return collect($this->manageableRoles())
+            ->mapWithKeys(fn (string $role) => [$role => match ($role) {
+                'admin' => 'Admin',
+                'auditor' => 'Auditor',
+                default => ucfirst(str_replace('_', ' ', $role)),
+            }])
+            ->all();
+    }
+
+    private function managedAccountLabel(): string
+    {
+        return auth()->user()?->isSuperAdmin() ? 'Admin' : 'Auditor';
     }
 
     private function deviceLabel(?string $userAgent): string

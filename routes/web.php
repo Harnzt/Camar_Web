@@ -38,9 +38,7 @@ Route::post('/logout',      [AuthController::class, 'logout'])->name('logout');
 Route::get('/', [LandingController::class, 'index'])->name('home');
 
 // Calculator Page 
-Route::get('/kalkulator', function () {
-    return view('main_page.calculator.calculator');
-})->name('calculator');
+Route::get('/kalkulator', [CalculatorController::class, 'show'])->name('calculator');
 
 // Education Page - Edukasi Carbon Offset
 Route::get('/edukasi', function () {
@@ -104,7 +102,7 @@ Route::middleware('auth')->group(function () {
 
     });
 
-Route::middleware(['auth', 'role:admin,super_admin'])
+Route::middleware(['auth', 'role:admin,auditor,super_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -140,7 +138,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])
                 ->name('transactions.update');
         });
 
-        Route::middleware(['role:super_admin', 'permission:admins.manage'])->group(function () {
+        Route::middleware(['role:admin,super_admin', 'permission:admins.manage'])->group(function () {
             Route::get('/administrators', [AdminManagementController::class, 'index'])
                 ->name('admins.index');
             Route::post('/administrators', [AdminManagementController::class, 'store'])

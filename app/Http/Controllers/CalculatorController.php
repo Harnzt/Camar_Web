@@ -5,12 +5,41 @@ namespace App\Http\Controllers;
 use App\Models\EmissionCalculation;
 use App\Services\ProjectRecommendationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CalculatorController extends Controller
 {
     public function __construct(
         private readonly ProjectRecommendationService $recommendationService
     ) {}
+
+    public function show()
+    {
+        $airports = [];
+
+        if (Schema::hasTable('airports_data')) {
+            $airports = DB::table('airports_data')
+                ->select('id', 'name', 'latitude_deg', 'longitude_deg', 'iata_code')
+                ->whereNotNull('iata_code')
+                ->where('iata_code', '<>', '')
+                ->orderBy('iata_code')
+                ->get()
+                ->map(fn ($airport) => [
+                    'id' => (int) $airport->id,
+                    'name' => $airport->name,
+                    'latitude_deg' => (float) $airport->latitude_deg,
+                    'longitude_deg' => (float) $airport->longitude_deg,
+                    'iata_code' => strtoupper((string) $airport->iata_code),
+                ])
+                ->values()
+                ->all();
+        }
+
+        return view('main_page.calculator.calculator', [
+            'airports' => $airports,
+        ]);
+    }
 
     public function store(Request $request)
     {
@@ -40,7 +69,7 @@ class CalculatorController extends Controller
                         ['label' => 'Konsumsi listrik', 'value_kg' => $details->get('elec', 0)],
                     ],
                     'scope3' => [
-                        ['label' => 'Perjalanan pesawat', 'value_kg' => $details->get('flight', 0)],
+                        ['label' => 'Penerbangan Dinas Karyawan', 'value_kg' => $details->get('flight', 0)],
                         ['label' => 'Akomodasi hotel', 'value_kg' => $details->get('hotel', 0)],
                         ['label' => 'Perjalanan kereta', 'value_kg' => $details->get('train', 0)],
                     ],
@@ -48,7 +77,7 @@ class CalculatorController extends Controller
             } else {
                 $scope1Kg = $details->only(['energy_rt', 'vehicle'])->sum();
                 $scope2Kg = $details->get('electricity', 0);
-                $scope3Kg = $details->only(['transit', 'food', 'water', 'waste'])->sum();
+                $scope3Kg = $details->only(['flight', 'transit', 'food', 'water', 'waste'])->sum();
                 $scopeDetails = [
                     'scope1' => [
                         ['label' => 'Energi rumah tangga', 'value_kg' => $details->get('energy_rt', 0)],
@@ -58,7 +87,7 @@ class CalculatorController extends Controller
                         ['label' => 'Konsumsi listrik', 'value_kg' => $details->get('electricity', 0)],
                     ],
                     'scope3' => [
-                        ['label' => 'Transportasi umum', 'value_kg' => $details->get('transit', 0)],
+                        ['label' => 'Penerbangan', 'value_kg' => $details->get('flight', $details->get('transit', 0))],
                         ['label' => 'Konsumsi makanan', 'value_kg' => $details->get('food', 0)],
                         ['label' => 'Penggunaan air', 'value_kg' => $details->get('water', 0)],
                         ['label' => 'Pengelolaan limbah', 'value_kg' => $details->get('waste', 0)],

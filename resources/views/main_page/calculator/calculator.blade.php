@@ -61,6 +61,12 @@
             @php $userRole = 'personal'; @endphp
         @endauth
 
+        <datalist id="airport-options">
+            @foreach(($airports ?? []) as $airport)
+                <option value="{{ $airport['iata_code'] }} - {{ $airport['name'] }}"></option>
+            @endforeach
+        </datalist>
+
         {{-- ================================================================
              PERSONAL CALCULATOR
              ================================================================ --}}
@@ -300,60 +306,71 @@
             <div id="personal-scope2-modules"></div>
 
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('p_transit')">
-                    <div class="module-icon scope-teal"><i class="fas fa-bus"></i></div>
+                <div class="module-header" onclick="toggleModule('p_flight')">
+                    <div class="module-icon scope-teal"><i class="fas fa-plane"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-teal">Scope 3</div>
-                        <h2 class="module-title">Transportasi Umum & Dinas</h2>
-                        <p class="module-subtitle">Penerbangan, kereta, bus, ojek online</p>
+                        <h2 class="module-title">Penerbangan</h2>
+                        <p class="module-subtitle">Jarak otomatis dari asal dan tujuan bandara</p>
                     </div>
-                    <div class="module-preview" id="prev_p_transit">0 <span>kg CO₂e</span></div>
+                    <div class="module-preview" id="prev_p_flight">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
                 </div>
-                <div class="module-content" id="p_transit-content">
+                <div class="module-content" id="p_flight-content">
 
                     <div class="ref-info-bar">
                         <i class="fas fa-info-circle"></i>
                         <span>Faktor emisi: GHG Protocol Scope 3 Cat.6 · DEFRA 2023 · Buku II Vol I KLHK 2012</span>
                     </div>
 
-                    <div id="rows_p_transit">
-                        <div class="entry-row" data-group="p_transit">
+                    <div id="rows_p_flight">
+                        <div class="entry-row" data-group="p_flight">
                             <div class="entry-fields">
                                 <div class="input-group">
-                                    <label class="input-label">Moda Transportasi</label>
-                                    <select class="input-field select-field" name="p_transit_mode[]" onchange="calcLive()">
-                                        <option value="">-- Pilih Moda --</option>
-                                        <option value="flight_dom">Pesawat Udara (Rute Domestik)</option>
-                                        <option value="flight_int_short">Pesawat Udara (Internasional &lt;3700 km)</option>
-                                        <option value="flight_int_long">Pesawat Udara (Internasional &gt;3700 km)</option>
-                                        <option value="train">Kereta Api / KRL / Jarak Jauh</option>
-                                        <option value="bus">Bus Umum / Angkot / Taksi / Ojek Online</option>
+                                    <label class="input-label">Kelas Kabin</label>
+                                    <select class="input-field select-field" name="p_flight_class[]" onchange="updateEfChip(this,'p_flight'); calcLive()">
+                                        <option value="">-- Pilih Kelas --</option>
+                                        <option value="economy">Ekonomi</option>
+                                        <option value="business">Bisnis</option>
+                                        <option value="first">First Class</option>
                                     </select>
                                 </div>
                                 <div class="input-group">
-                                    <label class="input-label">Jarak Perjalanan</label>
+                                    <label class="input-label">Jumlah Pax</label>
+                                    <input type="number" class="input-field" name="p_flight_pax[]" placeholder="0" min="0" step="1" oninput="calcLive()">
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label">Asal Penerbangan</label>
+                                    <input type="text" class="input-field airport-input" name="p_flight_origin[]" list="airport-options" placeholder="IATA atau nama bandara" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label">Tujuan Penerbangan</label>
+                                    <input type="text" class="input-field airport-input" name="p_flight_destination[]" list="airport-options" placeholder="IATA atau nama bandara" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label">Jarak Penerbangan</label>
                                     <div class="input-with-unit">
-                                        <input type="number" class="input-field" name="p_transit_km[]" placeholder="0" min="0" step="1" oninput="calcLive()">
+                                        <input type="number" class="input-field flight-distance" name="p_flight_km[]" placeholder="0" min="0" step="0.01" readonly>
                                         <span class="input-unit">km</span>
                                     </div>
+                                    <span class="input-hint flight-distance-hint">Pilih asal dan tujuan bandara</span>
                                 </div>
                                 <div class="input-group ef-display-group">
                                     <label class="input-label">Faktor Emisi</label>
-                                    <div class="ef-chip" data-ef-group="p_transit">—</div>
+                                    <div class="ef-chip" data-ef-group="p_flight">—</div>
                                 </div>
                             </div>
                             <button class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
 
-                    <button class="btn-add-row" onclick="addRow('p_transit')">
-                        <i class="fas fa-plus"></i> Tambah Perjalanan
+                    <button class="btn-add-row" onclick="addRow('p_flight')">
+                        <i class="fas fa-plus"></i> Tambah Rute Penerbangan
                     </button>
 
                     <div class="scope-preview">
-                        <span class="preview-label">Sub-total Transportasi:</span>
-                        <span class="preview-value" id="sub_p_transit">0</span>
+                        <span class="preview-label">Sub-total Penerbangan:</span>
+                        <span class="preview-value" id="sub_p_flight">0</span>
                         <span class="preview-unit">kg CO₂e</span>
                     </div>
                 </div>
@@ -892,7 +909,7 @@
                         <div class="module-icon scope-teal"><i class="fas fa-plane"></i></div>
                         <div class="module-info">
                             <div class="module-badge badge-teal">Cat.6 Bisnis</div>
-                            <h2 class="module-title">Perjalanan Udara Bisnis</h2>
+                            <h2 class="module-title">Penerbangan Dinas Karyawan</h2>
                             <p class="module-subtitle">Penerbangan dinas karyawan</p>
                         </div>
                         <div class="module-preview" id="prev_c_flight">0 <span>kg CO₂e</span></div>
@@ -907,7 +924,7 @@
                             <div class="entry-row" data-group="c_flight">
                                 <div class="entry-fields">
                                     <div class="input-group">
-                                        <label class="input-label">Kelas Penerbangan</label>
+                                        <label class="input-label">Kelas Kabin</label>
                                         <select class="input-field select-field" name="c_flight_class[]" onchange="updateEfChip(this,'c_flight'); calcLive()">
                                             <option value="">-- Pilih Kelas --</option>
                                             <option value="economy">Ekonomi</option>
@@ -916,15 +933,24 @@
                                         </select>
                                     </div>
                                     <div class="input-group">
-                                        <label class="input-label">Jumlah Penumpang</label>
+                                        <label class="input-label">Jumlah Pax</label>
                                         <input type="number" class="input-field" name="c_flight_pax[]" placeholder="0" min="0" step="1" oninput="calcLive()">
                                     </div>
                                     <div class="input-group">
-                                        <label class="input-label">Jarak Tempuh</label>
+                                        <label class="input-label">Asal Penerbangan</label>
+                                        <input type="text" class="input-field airport-input" name="c_flight_origin[]" list="airport-options" placeholder="IATA atau nama airport" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
+                                    </div>
+                                    <div class="input-group">
+                                        <label class="input-label">Tujuan Penerbangan</label>
+                                        <input type="text" class="input-field airport-input" name="c_flight_destination[]" list="airport-options" placeholder="IATA atau nama airport" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
+                                    </div>
+                                    <div class="input-group">
+                                        <label class="input-label">Jarak Penerbangan</label>
                                         <div class="input-with-unit">
-                                            <input type="number" class="input-field" name="c_flight_km[]" placeholder="0" min="0" step="1" oninput="calcLive()">
+                                            <input type="number" class="input-field flight-distance" name="c_flight_km[]" placeholder="0" min="0" step="0.01" readonly>
                                             <span class="input-unit">km</span>
                                         </div>
+                                        <span class="input-hint flight-distance-hint">Pilih asal dan tujuan bandara</span>
                                     </div>
                                     <div class="input-group ef-display-group">
                                         <label class="input-label">Faktor Emisi</label>
@@ -1236,6 +1262,7 @@
 <script>
     // Definisikan key SEBELUM file calculator.js dimuat agar terbaca sempurna
     window.CARBON_STORAGE_KEY = @auth "{{ 'carbon_history_user_' . Auth::id() }}" @else null @endauth;
+    window.AIRPORTS_DATA = @json($airports ?? []);
 </script>
 
 <script src="{{ asset('js/calculator.js') }}"></script>
