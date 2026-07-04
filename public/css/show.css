@@ -340,6 +340,14 @@ body {
   position: relative;
 }
 
+.tab-btn:focus-visible,
+.qty-btn:focus-visible,
+#btnBuyNowInstant:focus-visible,
+#addToCartBtn:focus-visible {
+  outline: 3px solid rgba(103, 192, 144, 0.7);
+  outline-offset: 3px;
+}
+
 .tab-btn.active { color: var(--green-900); }
 .tab-btn.active::after {
   content: '';

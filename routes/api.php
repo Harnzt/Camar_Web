@@ -10,6 +10,9 @@ use App\Http\Controllers\Api\SellerDashboardController;
 use App\Http\Controllers\CalculatorController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/airports', [CalculatorController::class, 'airports'])
+    ->middleware('throttle:60,1');
+
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])
         ->middleware('throttle:10,1');

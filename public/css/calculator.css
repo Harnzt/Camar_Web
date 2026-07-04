@@ -39,6 +39,7 @@
     display: flex; align-items: flex-end; overflow: hidden;
 }
 .calculator-hero-bg { position: absolute; inset: 0; z-index: 0; }
+.calculator-hero-bg picture { display: block; width: 100%; height: 100%; }
 .calculator-hero-bg img { width:100%; height:100%; object-fit:cover; object-position:center 35%; }
 .hero-overlay {
     position: absolute; inset: 0;
@@ -148,6 +149,19 @@
     transition: var(--tr); white-space: nowrap;
 }
 .step-tab-btn:hover { border-color: var(--green); color: var(--navy); background: var(--white); }
+.step-tab-btn:focus-visible,
+.sub-tab-btn:focus-visible,
+.method-btn:focus-visible,
+.module-header:focus-visible,
+.btn-add-row:focus-visible,
+.btn-remove-row:focus-visible,
+.btn-step-next:focus-visible,
+.btn-step-prev:focus-visible,
+.btn-calculate:focus-visible,
+.btn-reset:focus-visible {
+    outline: 3px solid rgba(103,192,144,.7);
+    outline-offset: 3px;
+}
 .step-tab-btn.active {
     background: linear-gradient(135deg, var(--navy), var(--teal));
     border-color: transparent; color: #fff;
@@ -235,6 +249,11 @@
 
 /* ── MODULE HEADER ───────────────────────────────────────────────────── */
 .module-header {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
     display: flex; align-items: center; gap: 1rem;
     padding: 1.25rem 1.5rem; cursor: pointer;
     transition: var(--tr); flex-wrap: wrap;

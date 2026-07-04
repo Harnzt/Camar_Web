@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\EmissionCalculation;
 use App\Services\ProjectRecommendationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -16,14 +17,40 @@ class CalculatorController extends Controller
 
     public function show()
     {
-        $airports = [];
+        return view('main_page.calculator.calculator');
+    }
 
-        if (Schema::hasTable('airports_data')) {
-            $airports = DB::table('airports_data')
+    public function airports(Request $request)
+    {
+        if (! Schema::hasTable('airports_data')) {
+            return response()->json([]);
+        }
+
+        $search = trim((string) $request->query('search', ''));
+        $limit = min(max((int) $request->query('limit', 12), 1), 20);
+
+        if (mb_strlen($search) < 2) {
+            return response()->json([]);
+        }
+
+        $normalisedSearch = mb_strtolower($search);
+        $cacheKey = 'airport_search:'.$limit.':'.md5($normalisedSearch);
+
+        $airports = Cache::remember($cacheKey, now()->addHours(6), function () use ($search, $limit) {
+            $iataSearch = strtoupper($search).'%';
+            $nameSearch = '%'.$search.'%';
+
+            return DB::table('airports_data')
                 ->select('id', 'name', 'latitude_deg', 'longitude_deg', 'iata_code')
                 ->whereNotNull('iata_code')
                 ->where('iata_code', '<>', '')
+                ->where(function ($query) use ($iataSearch, $nameSearch) {
+                    $query->where('iata_code', 'like', $iataSearch)
+                        ->orWhere('name', 'like', $nameSearch);
+                })
+                ->orderByRaw('CASE WHEN iata_code LIKE ? THEN 0 ELSE 1 END', [$iataSearch])
                 ->orderBy('iata_code')
+                ->limit($limit)
                 ->get()
                 ->map(fn ($airport) => [
                     'id' => (int) $airport->id,
@@ -31,14 +58,13 @@ class CalculatorController extends Controller
                     'latitude_deg' => (float) $airport->latitude_deg,
                     'longitude_deg' => (float) $airport->longitude_deg,
                     'iata_code' => strtoupper((string) $airport->iata_code),
+                    'display' => strtoupper((string) $airport->iata_code).' - '.$airport->name,
                 ])
                 ->values()
                 ->all();
-        }
+        });
 
-        return view('main_page.calculator.calculator', [
-            'airports' => $airports,
-        ]);
+        return response()->json($airports);
     }
 
     public function store(Request $request)

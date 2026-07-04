@@ -471,6 +471,17 @@
 }
 .modal-close:hover { background: var(--c-danger-bg); color: var(--c-danger-text); border-color: var(--c-danger-border); }
 
+.btn-view:focus-visible,
+.btn-export:focus-visible,
+.modal-close:focus-visible,
+th.sortable:focus-visible,
+.tab-btn:focus-visible,
+.btn-filter-submit:focus-visible,
+.btn-reset:focus-visible {
+    outline: 3px solid rgba(103,192,144,0.75);
+    outline-offset: 3px;
+}
+
 .modal-body { padding: 1.5rem; }
 .modal-loading { display: flex; justify-content: center; padding: 2rem; }
 

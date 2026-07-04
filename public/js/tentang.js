@@ -13,13 +13,24 @@
         // Close all FAQ items
         document.querySelectorAll('.faq-item').forEach(item => {
             item.classList.remove('active');
+            item.querySelector('.faq-question')?.setAttribute('aria-expanded', 'false');
+            const answer = item.querySelector('.faq-answer');
+            if (answer) answer.hidden = true;
         });
         
         // Toggle current item
         if (!isActive) {
             faqItem.classList.add('active');
+            element.setAttribute('aria-expanded', 'true');
+            const answerId = element.getAttribute('aria-controls');
+            const answer = answerId ? document.getElementById(answerId) : faqItem.querySelector('.faq-answer');
+            if (answer) answer.hidden = false;
         }
     };
+
+    document.querySelectorAll('.faq-question').forEach((button) => {
+        button.addEventListener('click', () => window.toggleFAQ(button));
+    });
 
     // Smooth scroll for internal links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {

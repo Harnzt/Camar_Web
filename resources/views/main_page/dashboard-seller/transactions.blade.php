@@ -192,7 +192,7 @@
                             </span>
                         </td>
                         <td style="text-align: center;">
-                            <button class="btn-icon btn-view btn-detail-trx" data-id="{{ $tx->id }}" data-detail="{{ json_encode($tx->load(['project', 'user'])) }}" title="Lihat Detail" style="background: none; border: none; color: var(--color-green, #67C090); cursor: pointer; padding: 4px 8px;">
+                            <button type="button" class="btn-icon btn-view btn-detail-trx" data-id="{{ $tx->id }}" data-detail="{{ json_encode($tx->load(['project', 'user'])) }}" title="Lihat Detail" aria-label="Lihat detail transaksi #{{ $tx->id }}" style="background: none; border: none; color: var(--color-green, #67C090); cursor: pointer; padding: 4px 8px;">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                                 </svg>
@@ -237,11 +237,11 @@
 {{-- =====================================================
      MODAL DETAIL TRANSAKSI (POP-UP)
      ===================================================== --}}
-<div class="modal-backdrop hidden" id="modalBackdrop">
-    <div class="modal" id="txModal" style="background: #fff; border-radius: 12px; max-width: 550px; width: 90%; margin: 10% auto; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);">
+<div class="modal-backdrop hidden" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" id="txModal" role="dialog" aria-modal="true" aria-labelledby="txModalTitle" tabindex="-1" style="background: #fff; border-radius: 12px; max-width: 550px; width: 90%; margin: 10% auto; padding: 1.5rem; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);">
         <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
-            <h2 class="modal-title" style="font-size: 1.25rem; font-weight: 700; color: #1e293b;"><i class="fas fa-receipt"></i> Rincian Transaksi Masuk</h2>
-            <button class="modal-close" id="modalClose" style="background: none; border: none; color: #94a3b8; cursor: pointer;">
+            <h2 class="modal-title" id="txModalTitle" style="font-size: 1.25rem; font-weight: 700; color: #1e293b;"><i class="fas fa-receipt"></i> Rincian Transaksi Masuk</h2>
+            <button type="button" class="modal-close" id="modalClose" aria-label="Tutup rincian transaksi" style="background: none; border: none; color: #94a3b8; cursor: pointer;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>

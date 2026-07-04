@@ -25,7 +25,10 @@
     {{-- SECTION: HERO --}}
     <section class="projects-hero" id="projects">
         <div class="projects-hero-bg">
-            <img src="{{ asset('images/pabrik0.png') }}" alt="Hero Background">
+            <picture>
+                <source type="image/webp" srcset="{{ asset('images/pabrik0-960.webp') }} 960w, {{ asset('images/pabrik0-1920.webp') }} 1920w" sizes="100vw">
+                <img src="{{ asset('images/pabrik0.png') }}" alt="" width="2816" height="1536" fetchpriority="high" decoding="async">
+            </picture>
         </div>
         <div class="container">
             <div class="projects-hero-content">

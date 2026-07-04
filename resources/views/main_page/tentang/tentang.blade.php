@@ -11,7 +11,10 @@
 <!-- Hero Section -->
 <section class="tentang-hero" id="tentang">
     <div class="tentang-hero-bg">
-        <img src="{{ asset('images/forest0.png') }}" alt="Hero Background">
+        <picture>
+            <source type="image/webp" srcset="{{ asset('images/forest0-960.webp') }} 960w, {{ asset('images/forest0-1920.webp') }} 1920w" sizes="100vw">
+            <img src="{{ asset('images/forest0.png') }}" alt="" width="2816" height="1536" fetchpriority="high" decoding="async">
+        </picture>
     </div>
     <div class="container">
         <div class="tentang-hero-content">
@@ -83,7 +86,7 @@
         <div class="values-grid">
             <div class="value-card">
                 <div class="value-icon">
-                    <i class="fas fa-shield-check"></i>
+                    <i class="fas fa-user-shield"></i>
                 </div>
                 <h3 class="value-title">Integritas</h3>
                 <p class="value-text">Transparansi dan kejujuran dalam setiap transaksi dan kemitraan</p>
@@ -193,41 +196,41 @@
 
         <div class="faq-accordion">
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFAQ(this)">
+                <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
                     <span>Apa itu carbon offset?</span>
                     <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="faq-answer">
+                </button>
+                <div class="faq-answer" id="faq-answer-1" hidden>
                     <p>Carbon offset adalah pengurangan emisi gas rumah kaca yang dibuat untuk mengompensasi emisi yang dihasilkan di tempat lain. Ini dilakukan dengan mendukung proyek yang mengurangi, menghindari, atau menyerap emisi CO₂.</p>
                 </div>
             </div>
 
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFAQ(this)">
+                <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
                     <span>Bagaimana cara kerja platform CAMAR?</span>
                     <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="faq-answer">
+                </button>
+                <div class="faq-answer" id="faq-answer-2" hidden>
                     <p>CAMAR menghubungkan pembeli (perusahaan) dengan penjual (pemilik proyek carbon offset). Platform kami menyediakan marketplace transparan dengan semua proyek terverifikasi internasional.</p>
                 </div>
             </div>
 
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFAQ(this)">
+                <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
                     <span>Apa saja jenis proyek yang tersedia?</span>
                     <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="faq-answer">
+                </button>
+                <div class="faq-answer" id="faq-answer-3" hidden>
                     <p>Kami menawarkan berbagai jenis proyek termasuk reforestasi, energi terbarukan (solar, wind, hydro), konservasi hutan, dan proyek efisiensi energi. Semua proyek telah diverifikasi dan memenuhi standar internasional.</p>
                 </div>
             </div>
 
             <div class="faq-item">
-                <div class="faq-question" onclick="toggleFAQ(this)">
+                <button type="button" class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
                     <span>Berapa biaya untuk menggunakan platform CAMAR?</span>
                     <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="faq-answer">
+                </button>
+                <div class="faq-answer" id="faq-answer-4" hidden>
                     <p>Registrasi di platform CAMAR gratis. Kami hanya mengambil komisi kecil dari setiap transaksi untuk memastikan keberlangsungan dan pengembangan platform.</p>
                 </div>
             </div>

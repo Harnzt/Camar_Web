@@ -152,12 +152,11 @@
                             </div>
                             <div class="form-group full">
                                 <label>Foto Proyek</label>
-                                <div class="file-drop" id="fileDrop"
-                                     onclick="document.getElementById('projectImage').click()">
+                                <button type="button" class="file-drop" id="fileDrop" data-file-target="projectImage">
                                     <i class="fas fa-cloud-upload-alt"></i>
                                     <span>Klik atau drag & drop foto proyek</span>
                                     <small>JPG, PNG — Maks 5MB</small>
-                                </div>
+                                </button>
                                 <input type="file" id="projectImage" name="image"
                                        accept="image/*" style="display:none;">
                             </div>

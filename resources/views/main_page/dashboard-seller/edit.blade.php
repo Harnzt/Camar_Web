@@ -106,13 +106,13 @@
                         
                         <div class="form-group full">
                             <label>Foto Proyek (Biarkan kosong jika tidak ingin diganti)</label>
-                            <div class="file-drop" onclick="document.getElementById('projectImage').click()">
+                            <button type="button" class="file-drop" id="fileDrop" data-file-target="projectImage">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <span>Klik untuk memilih foto baru jika ingin mengganti</span>
                                 @if($project->image)
                                     <small style="color: #10b981; display: block; font-weight: 700; margin-top: 5px;">Gambar saat ini: {{ $project->image }}</small>
                                 @endif
-                            </div>
+                            </button>
                             <input type="file" id="projectImage" name="image" accept="image/*" style="display:none;">
                         </div>
                     </div>

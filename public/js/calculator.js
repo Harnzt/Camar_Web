@@ -102,17 +102,18 @@ function getTransitEF(key) { return EF_DB.transit[key] || null; }
 function getTrainEF(key)   { return EF_DB.train[key] || null; }
 function getFoodEF(key)    { return EF_DB.food[key] || null; }
 
-const AIRPORTS = Array.isArray(window.AIRPORTS_DATA) ? window.AIRPORTS_DATA : [];
+const AIRPORT_API_URL = '/api/airports';
 const AIRPORT_LOOKUP = {
     byCode: new Map(),
     byName: new Map(),
     byDisplay: new Map(),
 };
+const AIRPORT_QUERY_CACHE = new Map();
 
-AIRPORTS.forEach((airport) => {
+function rememberAirport(airport) {
     const code = String(airport.iata_code || '').trim().toUpperCase();
     const name = String(airport.name || '').trim();
-    if (!code || !name) return;
+    if (!code || !name) return null;
 
     const normalisedAirport = {
         ...airport,
@@ -126,7 +127,73 @@ AIRPORTS.forEach((airport) => {
     AIRPORT_LOOKUP.byCode.set(code, normalisedAirport);
     AIRPORT_LOOKUP.byName.set(name.toLowerCase(), normalisedAirport);
     AIRPORT_LOOKUP.byDisplay.set(display.toLowerCase(), normalisedAirport);
-});
+
+    return normalisedAirport;
+}
+
+function renderAirportOptions(airports) {
+    const datalist = document.getElementById('airport-options');
+    if (!datalist) return;
+
+    datalist.innerHTML = airports
+        .map((airport) => {
+            const display = airport.display || `${airport.iata_code} - ${airport.name}`;
+            return `<option value="${escapeHtml(display)}"></option>`;
+        })
+        .join('');
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+async function fetchAirports(search) {
+    const query = String(search || '').trim();
+    if (query.length < 2) return [];
+
+    const cacheKey = query.toLowerCase();
+    if (AIRPORT_QUERY_CACHE.has(cacheKey)) {
+        return AIRPORT_QUERY_CACHE.get(cacheKey);
+    }
+
+    const url = `${AIRPORT_API_URL}?search=${encodeURIComponent(query)}&limit=12`;
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) return [];
+
+    const airports = await response.json();
+    const normalisedAirports = Array.isArray(airports)
+        ? airports.map(rememberAirport).filter(Boolean)
+        : [];
+
+    AIRPORT_QUERY_CACHE.set(cacheKey, normalisedAirports);
+    return normalisedAirports;
+}
+
+function scheduleAirportSearch(input) {
+    if (!input) return;
+
+    const query = String(input.value || '').trim();
+    if (query.length < 2) return;
+    if (input.dataset.airportSearchQuery === query) return;
+
+    clearTimeout(input._airportSearchTimer);
+    input._airportSearchTimer = setTimeout(() => {
+        fetchAirports(query)
+            .then((airports) => {
+                input.dataset.airportSearchQuery = query;
+                renderAirportOptions(airports);
+                updateFlightRoute(input);
+                calcLive();
+            })
+            .catch(() => {
+                input.dataset.airportSearchQuery = '';
+            });
+    }, 250);
+}
 
 function findAirport(value) {
     const raw = String(value || '').trim();
@@ -145,14 +212,26 @@ function findAirport(value) {
     return null;
 }
 
-function normaliseAirportField(input) {
-    const airport = findAirport(input?.value);
-    if (airport && input) input.value = airport.iata_code;
+async function normaliseAirportField(input) {
+    if (!input) return null;
+
+    let airport = findAirport(input.value);
+    if (!airport) {
+        await fetchAirports(input.value).catch(() => []);
+        airport = findAirport(input.value);
+    }
+
+    if (airport) {
+        input.value = airport.iata_code;
+        updateFlightRoute(input);
+        calcLive();
+    }
+
     return airport;
 }
 
 function normaliseAllAirportFields() {
-    document.querySelectorAll('.airport-input').forEach(normaliseAirportField);
+    return Promise.all([...document.querySelectorAll('.airport-input')].map(normaliseAirportField));
 }
 
 function haversineKm(origin, destination) {
@@ -184,6 +263,8 @@ function updateFlightRoute(inputOrRow) {
     if (!distanceInput) return 0;
 
     if (!origin || !destination) {
+        scheduleAirportSearch(originInput);
+        scheduleAirportSearch(destinationInput);
         distanceInput.value = '';
         if (hint) hint.textContent = 'Pilih asal dan tujuan bandara';
         return 0;
@@ -214,18 +295,21 @@ function switchTab(prefix, step, total) {
     // Hide all panes for this prefix
     for (let i = 1; i <= total; i++) {
         const pane = document.getElementById(`${prefix}-step-${i}`);
-        if (pane) pane.classList.remove('active');
+        if (pane) {
+            const isTarget = i === step;
+            pane.classList.toggle('active', isTarget);
+            pane.hidden = !isTarget;
+        }
     }
-    // Activate target
-    const target = document.getElementById(`${prefix}-step-${step}`);
-    if (target) target.classList.add('active');
 
     // Update tab buttons
-    document.querySelectorAll(`[data-step="${prefix}${step}"]`).forEach(b => b.classList.add('active'));
     for (let i = 1; i <= total; i++) {
-        if (i !== step) {
-            document.querySelectorAll(`[data-step="${prefix}${i}"]`).forEach(b => b.classList.remove('active'));
-        }
+        const isTarget = i === step;
+        document.querySelectorAll(`[data-step="${prefix}${i}"]`).forEach(b => {
+            b.classList.toggle('active', isTarget);
+            b.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+            b.tabIndex = isTarget ? 0 : -1;
+        });
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -233,27 +317,43 @@ function switchTab(prefix, step, total) {
 
 function switchSubTab(group, key) {
     // Hide all panes in group
-    document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+    document.querySelectorAll(`[id^="${group}-"]`).forEach(p => {
+        const isTarget = p.id === `${group}-${key}`;
+        p.classList.toggle('active', isTarget);
+        p.hidden = !isTarget;
+    });
     // Activate
     const target = document.getElementById(`${group}-${key}`);
     if (target) target.classList.add('active');
 
-    // Update sub-tab buttons (siblings of clicked)
-    const clicked = event ? event.currentTarget : null;
-    if (clicked) {
-        clicked.closest('.sub-step-tabs')?.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
-        clicked.classList.add('active');
-    }
+    document.querySelectorAll(`.sub-tab-btn[data-sub-tab-group="${group}"]`).forEach((button) => {
+        const isTarget = button.dataset.subTabKey === key;
+        button.classList.toggle('active', isTarget);
+        button.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+        button.tabIndex = isTarget ? 0 : -1;
+    });
 }
 
 function switchMethod(method) {
     document.getElementById('method-fuel')?.classList.remove('active');
     document.getElementById('method-dist')?.classList.remove('active');
     document.getElementById(`method-${method}`)?.classList.add('active');
+    document.getElementById('method-fuel')?.toggleAttribute('hidden', method !== 'fuel');
+    document.getElementById('method-dist')?.toggleAttribute('hidden', method !== 'dist');
 
     document.getElementById('methodFuelBtn')?.classList.remove('active');
     document.getElementById('methodDistBtn')?.classList.remove('active');
-    document.getElementById(method === 'fuel' ? 'methodFuelBtn' : 'methodDistBtn')?.classList.add('active');
+    const fuelBtn = document.getElementById('methodFuelBtn');
+    const distBtn = document.getElementById('methodDistBtn');
+    const activeBtn = method === 'fuel' ? fuelBtn : distBtn;
+
+    [fuelBtn, distBtn].forEach((btn) => {
+        if (!btn) return;
+        const isActive = btn === activeBtn;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        btn.tabIndex = isActive ? 0 : -1;
+    });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -268,7 +368,136 @@ function toggleModule(id) {
 
     const isOpen = content.classList.contains('open');
     content.classList.toggle('open', !isOpen);
+    content.hidden = isOpen;
+    header?.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
     icon?.classList.toggle('open', !isOpen);
+}
+
+function enhanceCalculatorAccessibility() {
+    document.querySelectorAll('.module-header[onclick]').forEach((header) => {
+        const match = header.getAttribute('onclick')?.match(/toggleModule\('([^']+)'\)/);
+        if (!match) return;
+
+        const moduleId = match[1];
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = header.className;
+        button.dataset.moduleToggle = moduleId;
+        button.setAttribute('aria-expanded', 'false');
+        button.setAttribute('aria-controls', `${moduleId}-content`);
+        button.innerHTML = header.innerHTML;
+        header.replaceWith(button);
+    });
+
+    document.querySelectorAll('[data-module-toggle]').forEach((button) => {
+        button.addEventListener('click', () => toggleModule(button.dataset.moduleToggle));
+    });
+
+    document.querySelectorAll('.module-content[id$="-content"]').forEach((content) => {
+        content.hidden = !content.classList.contains('open');
+    });
+
+    document.querySelectorAll('.step-tab-nav').forEach((nav) => {
+        nav.setAttribute('role', 'tablist');
+        nav.querySelectorAll('.step-tab-btn').forEach((button) => {
+            const step = button.dataset.step || '';
+            const prefix = step.charAt(0);
+            const number = step.slice(1);
+            const pane = document.getElementById(`${prefix}-step-${number}`);
+
+            button.type = 'button';
+            button.setAttribute('role', 'tab');
+            button.id ||= `${step}-tab`;
+            if (pane) {
+                button.setAttribute('aria-controls', pane.id);
+                pane.setAttribute('role', 'tabpanel');
+                pane.setAttribute('aria-labelledby', button.id);
+                pane.hidden = !pane.classList.contains('active');
+            }
+            button.setAttribute('aria-selected', button.classList.contains('active') ? 'true' : 'false');
+            button.tabIndex = button.classList.contains('active') ? 0 : -1;
+            button.addEventListener('click', () => switchTab(prefix, Number(number), nav.querySelectorAll('.step-tab-btn').length));
+        });
+
+        nav.addEventListener('keydown', (event) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            const tabs = [...nav.querySelectorAll('.step-tab-btn')];
+            const current = tabs.indexOf(document.activeElement);
+            if (current === -1) return;
+
+            event.preventDefault();
+            const nextIndex = event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                    ? tabs.length - 1
+                    : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            tabs[nextIndex].focus();
+            tabs[nextIndex].click();
+        });
+    });
+
+    document.querySelectorAll('.sub-step-tabs').forEach((nav) => {
+        nav.setAttribute('role', 'tablist');
+        nav.querySelectorAll('.sub-tab-btn').forEach((button) => {
+            const group = button.dataset.subTabGroup;
+            const key = button.dataset.subTabKey;
+            if (!group || !key) return;
+
+            const panelId = `${group}-${key}`;
+            const panel = document.getElementById(panelId);
+            button.type = 'button';
+            button.setAttribute('role', 'tab');
+            button.id ||= `${panelId}-tab`;
+            button.setAttribute('aria-controls', panelId);
+            button.setAttribute('aria-selected', button.classList.contains('active') ? 'true' : 'false');
+            button.tabIndex = button.classList.contains('active') ? 0 : -1;
+            if (panel) {
+                panel.setAttribute('role', 'tabpanel');
+                panel.setAttribute('aria-labelledby', button.id);
+                panel.hidden = !panel.classList.contains('active');
+            }
+            button.addEventListener('click', () => switchSubTab(group, key));
+        });
+
+        nav.addEventListener('keydown', (event) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            const tabs = [...nav.querySelectorAll('.sub-tab-btn')];
+            const current = tabs.indexOf(document.activeElement);
+            if (current === -1) return;
+
+            event.preventDefault();
+            const nextIndex = event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                    ? tabs.length - 1
+                    : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            tabs[nextIndex].focus();
+            tabs[nextIndex].click();
+        });
+    });
+
+    const methodButtons = [
+        ['methodFuelBtn', 'method-fuel'],
+        ['methodDistBtn', 'method-dist'],
+    ];
+    methodButtons.forEach(([buttonId, panelId]) => {
+        const button = document.getElementById(buttonId);
+        const panel = document.getElementById(panelId);
+        if (!button || !panel) return;
+
+        button.type = 'button';
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-controls', panelId);
+        button.setAttribute('aria-selected', button.classList.contains('active') ? 'true' : 'false');
+        button.tabIndex = button.classList.contains('active') ? 0 : -1;
+        panel.setAttribute('role', 'tabpanel');
+        panel.setAttribute('aria-labelledby', buttonId);
+        panel.hidden = !panel.classList.contains('active');
+    });
+
+    document.querySelectorAll('[data-method]').forEach((button) => {
+        button.addEventListener('click', () => switchMethod(button.dataset.method));
+    });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -554,9 +783,9 @@ function calcCompanyAll() {
 // MAIN CALCULATE BUTTONS
 // ═══════════════════════════════════════════════════════════════════════════════
 // Pastikan fungsi ini ada dan tidak terbungkus di dalam const atau let yang tertutup
-    function calculateAll(mode) {
+    async function calculateAll(mode) {
         console.log("Tombol hitung ditekan, mode:", mode);
-        normaliseAllAirportFields();
+        await normaliseAllAirportFields();
         updateAllFlightRoutes();
         
         // 1. Ambil data kalkulasi
@@ -655,7 +884,7 @@ function renderPersonalResult(cats, totalKg) {
     const scope3Pct = totalKg > 0 ? ((scope3 / totalKg) * 100).toFixed(1) : 0;
     const trees = Math.round(totalTon / 0.022);
     const saveButton = window.CARBON_STORAGE_KEY
-        ? `<button class="btn-calculate" onclick="saveCalculationToDatabase(event)">
+        ? `<button type="button" class="btn-calculate" data-save-calculation>
                 <i class="fas fa-cloud-upload-alt"></i> Simpan Hasil ke Dashboard
            </button>`
         : `<a href="/register" class="btn-calculate result-register-link">
@@ -696,7 +925,7 @@ function renderPersonalResult(cats, totalKg) {
             <a href="/proyek" class="btn-calculate result-project-link">
                 <i class="fas fa-seedling"></i> Cari Proyek Offset
             </a>
-            <button class="btn-reset" onclick="resetCalculator()">
+            <button class="btn-reset" type="button" data-reset-calculator>
                 <i class="fas fa-redo"></i> Hitung Ulang
             </button>
         </div>
@@ -757,7 +986,7 @@ function renderCompanyResult(c, totalKg) {
     const s3pct = totalKg > 0 ? ((scope3 / totalKg) * 100).toFixed(1) : 0;
     const trees = Math.round(totalTon / 0.022);
     const saveButton = window.CARBON_STORAGE_KEY
-        ? `<button class="btn-calculate" onclick="saveCalculationToDatabase(event)">
+        ? `<button type="button" class="btn-calculate" data-save-calculation>
                 <i class="fas fa-cloud-upload-alt"></i> Simpan Hasil ke Dashboard
            </button>`
         : '';
@@ -796,7 +1025,7 @@ function renderCompanyResult(c, totalKg) {
             <a href="/proyek" class="btn-calculate" style="text-decoration:none; display:inline-flex; align-items:center; gap:.5rem;">
                 <i class="fas fa-seedling"></i> Cari Proyek Offset
             </a>
-            <button class="btn-reset" onclick="resetCalculator()">
+            <button class="btn-reset" type="button" data-reset-calculator>
                 <i class="fas fa-redo"></i> Hitung Ulang
             </button>
         </div>
@@ -848,6 +1077,8 @@ function resetCalculator() {
 
 // ── INIT ───────────────────────────────────────────────────────────────────────
 function initAll() {
+    enhanceCalculatorAccessibility();
+
     document.querySelectorAll('select[name$="_fuel[]"], select[name$="_src[]"], select[name$="_mode[]"], select[name$="_type[]"], select[name$="_class[]"], select[name$="_fuel_type[]"], select[name$="_dist_fuel[]"]').forEach(sel => {
         sel.addEventListener('change', () => {
             const grpAttr = sel.closest('.entry-row')?.querySelector('.ef-chip[data-ef-group]');
@@ -1035,7 +1266,7 @@ function renderHistoryContainer() {
     
     // Tambahkan tombol opsional untuk menghapus semua log jejak memori lokal
     htmlContent += `
-        <button onclick="clearCarbonHistory()" style="background: none; border: none; color: #e74c3c; font-size: .75rem; font-weight: 700; cursor: pointer; margin-top: 12px; padding: 0; display: flex; align-items: center; gap: 4px;">
+        <button type="button" data-clear-carbon-history style="background: none; border: none; color: #e74c3c; font-size: .75rem; font-weight: 700; cursor: pointer; margin-top: 12px; padding: 0; display: flex; align-items: center; gap: 4px;">
             Hapus Semua Riwayat Lokal
         </button>
     `;
@@ -1148,12 +1379,57 @@ document.addEventListener('DOMContentLoaded', function() {
         htmlContent += `</div>`;
         
         htmlContent += `
-            <button onclick="clearCarbonHistory()" style="background: none; border: none; color: #e74c3c; font-size: .75rem; font-weight: 700; cursor: pointer; margin-top: 12px; padding: 0; display: flex; align-items: center; gap: 4px;">
+            <button type="button" data-clear-carbon-history style="background: none; border: none; color: #e74c3c; font-size: .75rem; font-weight: 700; cursor: pointer; margin-top: 12px; padding: 0; display: flex; align-items: center; gap: 4px;">
                 Hapus Semua Riwayat Lokal
             </button>
         `;
 
         historyWrapper.innerHTML = htmlContent;
+    }
+});
+
+document.addEventListener('click', function(event) {
+    const removeButton = event.target.closest('[data-remove-row]');
+    if (removeButton) {
+        window.removeRow(removeButton);
+        return;
+    }
+
+    const addButton = event.target.closest('[data-add-row]');
+    if (addButton) {
+        window.addRow(addButton.dataset.addRow);
+        return;
+    }
+
+    const switchButton = event.target.closest('[data-switch-tab-prefix]');
+    if (switchButton) {
+        window.switchTab(
+            switchButton.dataset.switchTabPrefix,
+            Number(switchButton.dataset.switchTabStep),
+            Number(switchButton.dataset.switchTabTotal)
+        );
+        return;
+    }
+
+    const calculateButton = event.target.closest('[data-calculate-mode]');
+    if (calculateButton) {
+        window.calculateAll(calculateButton.dataset.calculateMode);
+        return;
+    }
+
+    const saveButton = event.target.closest('[data-save-calculation]');
+    if (saveButton) {
+        window.saveCalculationToDatabase(event);
+        return;
+    }
+
+    if (event.target.closest('[data-reset-calculator]')) {
+        window.resetCalculator();
+        return;
+    }
+
+    if (event.target.closest('[data-clear-carbon-history]')) {
+        window.clearCarbonHistory();
     }
 });
 

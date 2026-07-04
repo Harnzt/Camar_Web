@@ -200,7 +200,7 @@
                             <input type="hidden" id="buyProjectId" value="{{ $project->id }}">
                             <input type="hidden" id="buyQty" value="1"> 
                             
-                            <button type="button" id="btnBuyNowInstant" onclick="handleBuyNowInstant()" class="btn btn-primary" style="width:100%">
+                            <button type="button" id="btnBuyNowInstant" class="btn btn-primary" style="width:100%">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; margin-right:5px; display:inline-block; vertical-align:middle;">
                                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                                 </svg>
@@ -291,18 +291,67 @@
         }
 
         // Fungsionalitas Switch Tab Modular (Mendukung letak kiri maupun kanan)
-        const tabs = document.querySelectorAll('.tab-btn');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const wrapper = tab.closest('.tabs-wrapper');
-                wrapper.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-                wrapper.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                
-                tab.classList.add('active');
+        document.querySelectorAll('.tabs-wrapper').forEach((wrapper, wrapperIndex) => {
+            const nav = wrapper.querySelector('.tabs-nav');
+            const tabs = [...wrapper.querySelectorAll('.tab-btn')];
+
+            nav?.setAttribute('role', 'tablist');
+
+            tabs.forEach((tab) => {
                 const paneId = tab.getAttribute('data-tab');
-                wrapper.querySelector('#' + paneId)?.classList.add('active');
+                const pane = wrapper.querySelector('#' + paneId);
+                const scopedPaneId = `project-${wrapperIndex}-${paneId}`;
+
+                tab.type = 'button';
+                tab.setAttribute('role', 'tab');
+                tab.id = tab.id || `${scopedPaneId}-tab`;
+                tab.setAttribute('aria-controls', scopedPaneId);
+
+                if (pane) {
+                    pane.id = scopedPaneId;
+                    pane.setAttribute('role', 'tabpanel');
+                    pane.setAttribute('aria-labelledby', tab.id);
+                }
             });
+
+            const activateTab = (targetTab, shouldFocus = false) => {
+                tabs.forEach((tab) => {
+                    const isActive = tab === targetTab;
+                    const panel = document.getElementById(tab.getAttribute('aria-controls'));
+
+                    tab.classList.toggle('active', isActive);
+                    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    tab.tabIndex = isActive ? 0 : -1;
+
+                    if (panel) {
+                        panel.classList.toggle('active', isActive);
+                        panel.hidden = !isActive;
+                    }
+                });
+
+                if (shouldFocus) targetTab.focus();
+            };
+
+            tabs.forEach((tab) => {
+                tab.addEventListener('click', () => activateTab(tab));
+                tab.addEventListener('keydown', (event) => {
+                    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                    event.preventDefault();
+
+                    const currentIndex = tabs.indexOf(tab);
+                    const nextIndex = event.key === 'Home'
+                        ? 0
+                        : event.key === 'End'
+                            ? tabs.length - 1
+                            : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+                    activateTab(tabs[nextIndex], true);
+                });
+            });
+
+            activateTab(tabs.find((tab) => tab.classList.contains('active')) || tabs[0]);
         });
+
+        document.getElementById('btnBuyNowInstant')?.addEventListener('click', handleBuyNowInstant);
     });
 
     function handleBuyNowInstant() {

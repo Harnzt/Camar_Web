@@ -28,8 +28,10 @@
     const sortableThs   = document.querySelectorAll('th.sortable');
     const loadingOverlay= document.getElementById('loadingOverlay');
     const modalBackdrop = document.getElementById('modalBackdrop');
+    const txModal       = document.getElementById('txModal');
     const modalClose    = document.getElementById('modalClose');
     const modalBody     = document.getElementById('modalBody');
+    let lastFocusedElement = null;
 
     /* ── Init: read URL params ── */
     function init() {
@@ -87,6 +89,10 @@
 
         // Sort headers
         sortableThs.forEach(th => {
+            th.setAttribute('role', 'button');
+            th.setAttribute('tabindex', '0');
+            th.setAttribute('aria-sort', th.dataset.col === state.sortCol ? state.sortDir : 'none');
+
             th.addEventListener('click', () => {
                 const col = th.dataset.col;
                 if (state.sortCol === col) {
@@ -97,6 +103,11 @@
                 }
                 syncSortIndicators();
                 applyFilters();
+            });
+            th.addEventListener('keydown', (event) => {
+                if (!['Enter', ' '].includes(event.key)) return;
+                event.preventDefault();
+                th.click();
             });
         });
 
@@ -109,7 +120,7 @@
         // Modal: view buttons (delegated)
         document.getElementById('txBody')?.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-view');
-            if (btn) openModal(btn.dataset.id);
+            if (btn) openModal(btn.dataset.id, btn);
         });
 
         // Modal close
@@ -118,7 +129,7 @@
             if (e.target === modalBackdrop) closeModal();
         });
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
+            if (e.key === 'Escape' && !modalBackdrop?.classList.contains('hidden')) closeModal();
         });
     }
 
@@ -171,11 +182,14 @@
             const icon = th.querySelector('.sort-icon');
             if (th.dataset.col === state.sortCol) {
                 th.classList.add('th-sort-active');
+                th.setAttribute('aria-sort', state.sortDir);
                 if (icon) {
                     icon.innerHTML = state.sortDir === 'asc'
                         ? '<path d="M7 15l5 5 5-5"/><line x1="12" y1="3" x2="12" y2="20"/>'
                         : '<path d="M7 9l5-5 5 5"/><line x1="12" y1="21" x2="12" y2="4"/>';
                 }
+            } else {
+                th.setAttribute('aria-sort', 'none');
             }
         });
     }
@@ -197,10 +211,28 @@
     }
 
     /* ── Modal ── */
-    function openModal(id) {
+    function openModal(id, trigger = null) {
+        if (!modalBackdrop || !modalBody) return;
+
+        lastFocusedElement = trigger || document.activeElement;
         modalBackdrop.classList.remove('hidden');
+        modalBackdrop.setAttribute('aria-hidden', 'false');
         modalBody.innerHTML = '<div class="modal-loading"><div class="spinner"></div></div>';
         document.body.style.overflow = 'hidden';
+        (modalClose || txModal)?.focus();
+
+        if (!window.transactionRoutes?.show && trigger?.dataset.detail) {
+            try {
+                renderModalContent(JSON.parse(trigger.dataset.detail));
+                return;
+            } catch (error) {
+                modalBody.innerHTML = `
+                    <div style="text-align:center; padding:2rem; color:#991B1B;">
+                        <p>Gagal membaca data transaksi.</p>
+                    </div>`;
+                return;
+            }
+        }
 
         fetch(window.transactionRoutes.show + id, {
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
@@ -216,8 +248,14 @@
     }
 
     function closeModal() {
+        if (!modalBackdrop) return;
+
         modalBackdrop.classList.add('hidden');
+        modalBackdrop.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
+        if (lastFocusedElement instanceof HTMLElement) {
+            lastFocusedElement.focus();
+        }
     }
 
     function renderModalContent(tx) {

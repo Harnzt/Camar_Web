@@ -211,7 +211,10 @@
             <div class="news-grid">
                 <div class="news-card featured-news">
                     <div class="news-image">
-                        <img src="{{ asset('images/mangrove0.png') }}" alt="News">
+                        <picture>
+                            <source type="image/webp" srcset="{{ asset('images/mangrove0-960.webp') }} 960w, {{ asset('images/mangrove0-1920.webp') }} 1920w" sizes="(max-width: 991px) 100vw, 50vw">
+                            <img src="{{ asset('images/mangrove0.png') }}" alt="Berita regulasi karbon Indonesia" width="2816" height="1536" loading="lazy" decoding="async">
+                        </picture>
                         <span class="news-tag">Regulasi</span>
                     </div>
                     <div class="news-body">
@@ -451,7 +454,10 @@
             <div class="news-grid">
                 <div class="news-card featured-news">
                     <div class="news-image">
-                        <img src="{{ asset('images/mangrove0.png') }}" alt="Market">
+                        <picture>
+                            <source type="image/webp" srcset="{{ asset('images/mangrove0-960.webp') }} 960w, {{ asset('images/mangrove0-1920.webp') }} 1920w" sizes="(max-width: 991px) 100vw, 50vw">
+                            <img src="{{ asset('images/mangrove0.png') }}" alt="Insight pasar karbon Indonesia" width="2816" height="1536" loading="lazy" decoding="async">
+                        </picture>
                         <span class="news-tag">Harga Karbon</span>
                     </div>
                     <div class="news-body">
@@ -582,7 +588,7 @@
                             </div>
 
                             <div class="project-card__footer">
-                                <button class="btn-action btn-action--manage" onclick="window.location.href='{{ route('login') }}'">Detail</button>
+                                <a class="btn-action btn-action--manage" href="{{ route('login') }}">Detail</a>
                             </div>
                         </div>
                     </div>

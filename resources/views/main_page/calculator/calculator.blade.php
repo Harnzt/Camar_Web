@@ -10,11 +10,14 @@
 @section('content')
 
 {{-- =====================================================
-     HERO
+    HERO
      ===================================================== --}}
 <section class="calculator-hero" id="calculator">
     <div class="calculator-hero-bg">
-        <img src="{{ asset('images/gunung0.png') }}" alt="Hero Background">
+        <picture>
+            <source type="image/webp" srcset="{{ asset('images/gunung0-960.webp') }} 960w, {{ asset('images/gunung0-1920.webp') }} 1920w" sizes="100vw">
+            <img src="{{ asset('images/gunung0.png') }}" alt="" width="2816" height="1536" fetchpriority="high" decoding="async">
+        </picture>
         <div class="hero-overlay"></div>
     </div>
     <div class="container">
@@ -61,11 +64,7 @@
             @php $userRole = 'personal'; @endphp
         @endauth
 
-        <datalist id="airport-options">
-            @foreach(($airports ?? []) as $airport)
-                <option value="{{ $airport['iata_code'] }} - {{ $airport['name'] }}"></option>
-            @endforeach
-        </datalist>
+        <datalist id="airport-options"></datalist>
 
         {{-- ================================================================
              PERSONAL CALCULATOR
@@ -84,22 +83,22 @@
 
         {{-- Step Tab Nav: Personal --}}
         <div class="step-tab-nav" id="personalNav">
-            <button class="step-tab-btn active" data-step="p1" onclick="switchTab('p',1,4)">
+            <button class="step-tab-btn active" data-step="p1">
                 <span class="tab-number">1</span>
                 <span class="tab-label">Scope 1</span>
             </button>
             <div class="tab-connector"></div>
-            <button class="step-tab-btn" data-step="p2" onclick="switchTab('p',2,4)">
+            <button class="step-tab-btn" data-step="p2">
                 <span class="tab-number">2</span>
                 <span class="tab-label">Scope 2</span>
             </button>
             <div class="tab-connector"></div>
-            <button class="step-tab-btn" data-step="p3" onclick="switchTab('p',3,4)">
+            <button class="step-tab-btn" data-step="p3">
                 <span class="tab-number">3</span>
                 <span class="tab-label">Scope 3</span>
             </button>
             <div class="tab-connector"></div>
-            <button class="step-tab-btn" data-step="p4" onclick="switchTab('p',4,4)">
+            <button class="step-tab-btn" data-step="p4">
                 <span class="tab-number">4</span>
                 <span class="tab-label">Hasil</span>
             </button>
@@ -116,7 +115,7 @@
 
             {{-- ENERGI RUMAH TANGGA --}}
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('p_energy')">
+                <button type="button" class="module-header" data-module-toggle="p_energy" aria-expanded="false" aria-controls="p_energy-content">
                     <div class="module-icon scope-green"><i class="fas fa-home"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-green">Pembakaran Stasioner</div>
@@ -125,7 +124,7 @@
                     </div>
                     <div class="module-preview" id="prev_p_energy">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                </div>
+                </button>
                 <div class="module-content" id="p_energy-content">
 
                     <div class="ref-info-bar">
@@ -157,11 +156,11 @@
                                     <div class="ef-chip" data-ef-group="p_energy">—</div>
                                 </div>
                             </div>
-                            <button class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris"><i class="fas fa-times"></i></button>
+                            <button type="button" class="btn-remove-row" data-remove-row title="Hapus baris" aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
 
-                    <button class="btn-add-row" onclick="addRow('p_energy')">
+                    <button type="button" class="btn-add-row" data-add-row="p_energy">
                         <i class="fas fa-plus"></i> Tambah Bahan Bakar
                     </button>
 
@@ -175,7 +174,7 @@
 
             {{-- KENDARAAN PRIBADI --}}
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('p_vehicle')">
+                <button type="button" class="module-header" data-module-toggle="p_vehicle" aria-expanded="false" aria-controls="p_vehicle-content">
                     <div class="module-icon scope-orange"><i class="fas fa-car"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-orange">Pembakaran Bergerak</div>
@@ -184,7 +183,7 @@
                     </div>
                     <div class="module-preview" id="prev_p_vehicle">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                </div>
+                </button>
                 <div class="module-content" id="p_vehicle-content">
 
                     <div class="ref-info-bar">
@@ -227,11 +226,11 @@
                                     <div class="ef-chip" data-ef-group="p_vehicle">—</div>
                                 </div>
                             </div>
-                            <button class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris"><i class="fas fa-times"></i></button>
+                            <button type="button" class="btn-remove-row" data-remove-row title="Hapus baris" aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
 
-                    <button class="btn-add-row" onclick="addRow('p_vehicle')">
+                    <button type="button" class="btn-add-row" data-add-row="p_vehicle">
                         <i class="fas fa-plus"></i> Tambah Kendaraan
                     </button>
 
@@ -245,7 +244,7 @@
 
             {{-- LISTRIK PLN --}}
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('p_electricity')">
+                <button type="button" class="module-header" data-module-toggle="p_electricity" aria-expanded="false" aria-controls="p_electricity-content">
                     <div class="module-icon scope-blue"><i class="fas fa-bolt"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-blue">Scope 2</div>
@@ -254,7 +253,7 @@
                     </div>
                     <div class="module-preview" id="prev_p_electricity">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                </div>
+                </button>
                 <div class="module-content" id="p_electricity-content">
 
                     <div class="ref-info-bar">
@@ -288,7 +287,7 @@
             {{-- STEP NAV --}}
             <div class="step-pane-nav">
                 <div></div>
-                <button class="btn-step-next" onclick="switchTab('p',2,4)">
+                <button type="button" class="btn-step-next" data-switch-tab-prefix="p" data-switch-tab-step="2" data-switch-tab-total="4">
                     Scope 2 — Listrik <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -306,7 +305,7 @@
             <div id="personal-scope2-modules"></div>
 
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('p_flight')">
+                <button type="button" class="module-header" data-module-toggle="p_flight" aria-expanded="false" aria-controls="p_flight-content">
                     <div class="module-icon scope-teal"><i class="fas fa-plane"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-teal">Scope 3</div>
@@ -315,7 +314,7 @@
                     </div>
                     <div class="module-preview" id="prev_p_flight">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                </div>
+                </button>
                 <div class="module-content" id="p_flight-content">
 
                     <div class="ref-info-bar">
@@ -360,11 +359,11 @@
                                     <div class="ef-chip" data-ef-group="p_flight">—</div>
                                 </div>
                             </div>
-                            <button class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris"><i class="fas fa-times"></i></button>
+                            <button type="button" class="btn-remove-row" data-remove-row title="Hapus baris" aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
 
-                    <button class="btn-add-row" onclick="addRow('p_flight')">
+                    <button type="button" class="btn-add-row" data-add-row="p_flight">
                         <i class="fas fa-plus"></i> Tambah Rute Penerbangan
                     </button>
 
@@ -377,10 +376,10 @@
             </div>
 
             <div class="step-pane-nav">
-                <button class="btn-step-prev" onclick="switchTab('p',1,4)">
+                <button type="button" class="btn-step-prev" data-switch-tab-prefix="p" data-switch-tab-step="1" data-switch-tab-total="4">
                     <i class="fas fa-arrow-left"></i> Scope 1
                 </button>
-                <button class="btn-step-next" onclick="switchTab('p',3,4)">
+                <button type="button" class="btn-step-next" data-switch-tab-prefix="p" data-switch-tab-step="3" data-switch-tab-total="4">
                     Scope 3 <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -399,7 +398,7 @@
 
             {{-- PANGAN --}}
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('p_food')">
+                <button type="button" class="module-header" data-module-toggle="p_food" aria-expanded="false" aria-controls="p_food-content">
                     <div class="module-icon scope-green"><i class="fas fa-utensils"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-green">Scope 3</div>
@@ -408,7 +407,7 @@
                     </div>
                     <div class="module-preview" id="prev_p_food">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                </div>
+                </button>
                 <div class="module-content" id="p_food-content">
 
                     <div class="ref-info-bar">
@@ -441,11 +440,11 @@
                                     <div class="ef-chip" data-ef-group="p_food">—</div>
                                 </div>
                             </div>
-                            <button class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris"><i class="fas fa-times"></i></button>
+                            <button type="button" class="btn-remove-row" data-remove-row title="Hapus baris" aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
 
-                    <button class="btn-add-row" onclick="addRow('p_food')">
+                    <button type="button" class="btn-add-row" data-add-row="p_food">
                         <i class="fas fa-plus"></i> Tambah Komoditas
                     </button>
 
@@ -459,7 +458,7 @@
 
             {{-- AIR BERSIH --}}
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('p_water')">
+                <button type="button" class="module-header" data-module-toggle="p_water" aria-expanded="false" aria-controls="p_water-content">
                     <div class="module-icon scope-blue"><i class="fas fa-tint"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-blue">Scope 3</div>
@@ -468,7 +467,7 @@
                     </div>
                     <div class="module-preview" id="prev_p_water">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                </div>
+                </button>
                 <div class="module-content" id="p_water-content">
                     <div class="ref-info-bar">
                         <i class="fas fa-info-circle"></i>
@@ -497,7 +496,7 @@
 
             {{-- SAMPAH --}}
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('p_waste')">
+                <button type="button" class="module-header" data-module-toggle="p_waste" aria-expanded="false" aria-controls="p_waste-content">
                     <div class="module-icon scope-orange"><i class="fas fa-trash-alt"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-orange">Scope 3</div>
@@ -506,7 +505,7 @@
                     </div>
                     <div class="module-preview" id="prev_p_waste">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                </div>
+                </button>
                 <div class="module-content" id="p_waste-content">
                     <div class="ref-info-bar">
                         <i class="fas fa-info-circle"></i>
@@ -535,16 +534,16 @@
 
             {{-- HITUNG BUTTON --}}
             <div class="action-buttons">
-                <button class="btn-calculate" onclick="calculateAll('personal')">
+                <button type="button" class="btn-calculate" data-calculate-mode="personal">
                     <i class="fas fa-calculator"></i> Hitung Total Jejak Karbon
                 </button>
-                <button class="btn-reset" onclick="resetCalculator()">
+                <button type="button" class="btn-reset" data-reset-calculator>
                     <i class="fas fa-redo"></i> Reset
                 </button>
             </div>
 
             <div class="step-pane-nav">
-                <button class="btn-step-prev" onclick="switchTab('p',2,4)">
+                <button type="button" class="btn-step-prev" data-switch-tab-prefix="p" data-switch-tab-step="2" data-switch-tab-total="4">
                     <i class="fas fa-arrow-left"></i> Scope 2
                 </button>
                 <div></div>
@@ -561,22 +560,22 @@
 
         {{-- Step Tab Nav: Company --}}
         <div class="step-tab-nav" id="companyNav">
-            <button class="step-tab-btn active" data-step="c1" onclick="switchTab('c',1,4)">
+            <button class="step-tab-btn active" data-step="c1">
                 <span class="tab-number">1</span>
                 <span class="tab-label">Scope 1</span>
             </button>
             <div class="tab-connector"></div>
-            <button class="step-tab-btn" data-step="c2" onclick="switchTab('c',2,4)">
+            <button class="step-tab-btn" data-step="c2">
                 <span class="tab-number">2</span>
                 <span class="tab-label">Scope 2</span>
             </button>
             <div class="tab-connector"></div>
-            <button class="step-tab-btn" data-step="c3" onclick="switchTab('c',3,4)">
+            <button class="step-tab-btn" data-step="c3">
                 <span class="tab-number">3</span>
                 <span class="tab-label">Scope 3</span>
             </button>
             <div class="tab-connector"></div>
-            <button class="step-tab-btn" data-step="c4" onclick="switchTab('c',4,4)">
+            <button class="step-tab-btn" data-step="c4">
                 <span class="tab-number">4</span>
                 <span class="tab-label">Hasil</span>
             </button>
@@ -593,10 +592,10 @@
 
             {{-- Scope 1 – Sub Step Tab --}}
             <div class="sub-step-tabs">
-                <button class="sub-tab-btn active" onclick="switchSubTab('s1', 'stat')">
+                <button class="sub-tab-btn active" data-sub-tab-group="s1" data-sub-tab-key="stat">
                     <i class="fas fa-fire-alt"></i> Step 1: Pembakaran Stasioner
                 </button>
-                <button class="sub-tab-btn" onclick="switchSubTab('s1', 'mobile')">
+                <button class="sub-tab-btn" data-sub-tab-group="s1" data-sub-tab-key="mobile">
                     <i class="fas fa-car-side"></i> Step 2: Pembakaran Bergerak
                 </button>
             </div>
@@ -604,7 +603,7 @@
             {{-- S1 Sub: Stasioner --}}
             <div class="sub-tab-pane active" id="s1-stat">
                 <div class="calc-module">
-                    <div class="module-header" onclick="toggleModule('c_stat')">
+                    <button type="button" class="module-header" data-module-toggle="c_stat" aria-expanded="false" aria-controls="c_stat-content">
                         <div class="module-icon scope-orange"><i class="fas fa-industry"></i></div>
                         <div class="module-info">
                             <div class="module-badge badge-orange">Stasioner</div>
@@ -613,7 +612,7 @@
                         </div>
                         <div class="module-preview" id="prev_c_stat">0 <span>kg CO₂e</span></div>
                         <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                    </div>
+                    </button>
                     <div class="module-content" id="c_stat-content">
 
                         <div class="ref-info-bar">
@@ -659,11 +658,11 @@
                                         <div class="ef-chip" data-ef-group="c_stat">—</div>
                                     </div>
                                 </div>
-                                <button class="btn-remove-row" onclick="removeRow(this)" title="Hapus baris"><i class="fas fa-times"></i></button>
+                                <button type="button" class="btn-remove-row" data-remove-row title="Hapus baris" aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
 
-                        <button class="btn-add-row" onclick="addRow('c_stat')">
+                        <button type="button" class="btn-add-row" data-add-row="c_stat">
                             <i class="fas fa-plus"></i> Tambah Bahan Bakar
                         </button>
 
@@ -679,7 +678,7 @@
             {{-- S1 Sub: Mobile --}}
             <div class="sub-tab-pane" id="s1-mobile">
                 <div class="calc-module">
-                    <div class="module-header" onclick="toggleModule('c_mobile')">
+                    <button type="button" class="module-header" data-module-toggle="c_mobile" aria-expanded="false" aria-controls="c_mobile-content">
                         <div class="module-icon scope-orange"><i class="fas fa-truck"></i></div>
                         <div class="module-info">
                             <div class="module-badge badge-orange">Bergerak</div>
@@ -688,7 +687,7 @@
                         </div>
                         <div class="module-preview" id="prev_c_mobile">0 <span>kg CO₂e</span></div>
                         <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                    </div>
+                    </button>
                     <div class="module-content" id="c_mobile-content">
 
                         <div class="ref-info-bar">
@@ -698,10 +697,10 @@
 
                         {{-- Sub-sub toggle: pemakaian BBM vs jarak --}}
                         <div class="method-toggle-row">
-                            <button class="method-btn active" id="methodFuelBtn" onclick="switchMethod('fuel')">
+                            <button class="method-btn active" id="methodFuelBtn" data-method="fuel">
                                 <i class="fas fa-gas-pump"></i> Berdasarkan Pemakaian BBM
                             </button>
-                            <button class="method-btn" id="methodDistBtn" onclick="switchMethod('dist')">
+                            <button class="method-btn" id="methodDistBtn" data-method="dist">
                                 <i class="fas fa-road"></i> Berdasarkan Jarak Tempuh
                             </button>
                         </div>
@@ -738,10 +737,10 @@
                                             <div class="ef-chip" data-ef-group="c_mobile_fuel">—</div>
                                         </div>
                                     </div>
-                                    <button class="btn-remove-row" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
+                                    <button type="button" class="btn-remove-row" data-remove-row aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                                 </div>
                             </div>
-                            <button class="btn-add-row" onclick="addRow('c_mobile_fuel')">
+                            <button type="button" class="btn-add-row" data-add-row="c_mobile_fuel">
                                 <i class="fas fa-plus"></i> Tambah Kendaraan
                             </button>
                         </div>
@@ -777,10 +776,10 @@
                                             <div class="ef-chip" data-ef-group="c_mobile_dist">—</div>
                                         </div>
                                     </div>
-                                    <button class="btn-remove-row" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
+                                    <button type="button" class="btn-remove-row" data-remove-row aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                                 </div>
                             </div>
-                            <button class="btn-add-row" onclick="addRow('c_mobile_dist')">
+                            <button type="button" class="btn-add-row" data-add-row="c_mobile_dist">
                                 <i class="fas fa-plus"></i> Tambah Kendaraan
                             </button>
                         </div>
@@ -796,7 +795,7 @@
 
             <div class="step-pane-nav">
                 <div></div>
-                <button class="btn-step-next" onclick="switchTab('c',2,4)">
+                <button type="button" class="btn-step-next" data-switch-tab-prefix="c" data-switch-tab-step="2" data-switch-tab-total="4">
                     Scope 2 — Listrik <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -812,7 +811,7 @@
             </div>
 
             <div class="calc-module">
-                <div class="module-header" onclick="toggleModule('c_elec')">
+                <button type="button" class="module-header" data-module-toggle="c_elec" aria-expanded="false" aria-controls="c_elec-content">
                     <div class="module-icon scope-blue"><i class="fas fa-bolt"></i></div>
                     <div class="module-info">
                         <div class="module-badge badge-blue">Scope 2</div>
@@ -821,7 +820,7 @@
                     </div>
                     <div class="module-preview" id="prev_c_elec">0 <span>kg CO₂e</span></div>
                     <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                </div>
+                </button>
                 <div class="module-content" id="c_elec-content">
 
                     <div class="ref-info-bar">
@@ -854,11 +853,11 @@
                                     <div class="ef-chip" data-ef-group="c_elec">—</div>
                                 </div>
                             </div>
-                            <button class="btn-remove-row" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
+                            <button type="button" class="btn-remove-row" data-remove-row aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                         </div>
                     </div>
 
-                    <button class="btn-add-row" onclick="addRow('c_elec')">
+                    <button type="button" class="btn-add-row" data-add-row="c_elec">
                         <i class="fas fa-plus"></i> Tambah Sumber Listrik
                     </button>
 
@@ -871,10 +870,10 @@
             </div>
 
             <div class="step-pane-nav">
-                <button class="btn-step-prev" onclick="switchTab('c',1,4)">
+                <button type="button" class="btn-step-prev" data-switch-tab-prefix="c" data-switch-tab-step="1" data-switch-tab-total="4">
                     <i class="fas fa-arrow-left"></i> Scope 1
                 </button>
-                <button class="btn-step-next" onclick="switchTab('c',3,4)">
+                <button type="button" class="btn-step-next" data-switch-tab-prefix="c" data-switch-tab-step="3" data-switch-tab-total="4">
                     Scope 3 <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -891,13 +890,13 @@
 
             {{-- Scope 3 Sub-Step Tabs --}}
             <div class="sub-step-tabs">
-                <button class="sub-tab-btn active" onclick="switchSubTab('s3','flight')">
+                <button class="sub-tab-btn active" data-sub-tab-group="s3" data-sub-tab-key="flight">
                     <i class="fas fa-plane"></i> Step 1: Pesawat
                 </button>
-                <button class="sub-tab-btn" onclick="switchSubTab('s3','hotel')">
+                <button class="sub-tab-btn" data-sub-tab-group="s3" data-sub-tab-key="hotel">
                     <i class="fas fa-hotel"></i> Step 2: Hotel
                 </button>
-                <button class="sub-tab-btn" onclick="switchSubTab('s3','train')">
+                <button class="sub-tab-btn" data-sub-tab-group="s3" data-sub-tab-key="train">
                     <i class="fas fa-train"></i> Step 3: Kereta
                 </button>
             </div>
@@ -905,7 +904,7 @@
             {{-- S3: Pesawat --}}
             <div class="sub-tab-pane active" id="s3-flight">
                 <div class="calc-module">
-                    <div class="module-header" onclick="toggleModule('c_flight')">
+                    <button type="button" class="module-header" data-module-toggle="c_flight" aria-expanded="false" aria-controls="c_flight-content">
                         <div class="module-icon scope-teal"><i class="fas fa-plane"></i></div>
                         <div class="module-info">
                             <div class="module-badge badge-teal">Cat.6 Bisnis</div>
@@ -914,7 +913,7 @@
                         </div>
                         <div class="module-preview" id="prev_c_flight">0 <span>kg CO₂e</span></div>
                         <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                    </div>
+                    </button>
                     <div class="module-content" id="c_flight-content">
                         <div class="ref-info-bar">
                             <i class="fas fa-info-circle"></i>
@@ -938,11 +937,11 @@
                                     </div>
                                     <div class="input-group">
                                         <label class="input-label">Asal Penerbangan</label>
-                                        <input type="text" class="input-field airport-input" name="c_flight_origin[]" list="airport-options" placeholder="IATA atau nama airport" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
+                                        <input type="text" class="input-field airport-input" name="c_flight_origin[]" list="airport-options" placeholder="IATA atau nama bandara" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
                                     </div>
                                     <div class="input-group">
                                         <label class="input-label">Tujuan Penerbangan</label>
-                                        <input type="text" class="input-field airport-input" name="c_flight_destination[]" list="airport-options" placeholder="IATA atau nama airport" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
+                                        <input type="text" class="input-field airport-input" name="c_flight_destination[]" list="airport-options" placeholder="IATA atau nama bandara" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
                                     </div>
                                     <div class="input-group">
                                         <label class="input-label">Jarak Penerbangan</label>
@@ -957,10 +956,10 @@
                                         <div class="ef-chip" data-ef-group="c_flight">—</div>
                                     </div>
                                 </div>
-                                <button class="btn-remove-row" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
+                                <button type="button" class="btn-remove-row" data-remove-row aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
-                        <button class="btn-add-row" onclick="addRow('c_flight')">
+                        <button type="button" class="btn-add-row" data-add-row="c_flight">
                             <i class="fas fa-plus"></i> Tambah Rute Penerbangan
                         </button>
                         <div class="scope-preview">
@@ -975,7 +974,7 @@
             {{-- S3: Hotel --}}
             <div class="sub-tab-pane" id="s3-hotel">
                 <div class="calc-module">
-                    <div class="module-header" onclick="toggleModule('c_hotel')">
+                    <button type="button" class="module-header" data-module-toggle="c_hotel" aria-expanded="false" aria-controls="c_hotel-content">
                         <div class="module-icon scope-teal"><i class="fas fa-hotel"></i></div>
                         <div class="module-info">
                             <div class="module-badge badge-teal">Cat.6 Hotel</div>
@@ -984,7 +983,7 @@
                         </div>
                         <div class="module-preview" id="prev_c_hotel">0 <span>kg CO₂e</span></div>
                         <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                    </div>
+                    </button>
                     <div class="module-content" id="c_hotel-content">
                         <div class="ref-info-bar">
                             <i class="fas fa-info-circle"></i>
@@ -1009,10 +1008,10 @@
                                         <div class="ef-chip">20,6 kgCO₂e/kamar·malam<br><small>DEFRA 2023 · GHG Protocol Cat.6</small></div>
                                     </div>
                                 </div>
-                                <button class="btn-remove-row" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
+                                <button type="button" class="btn-remove-row" data-remove-row aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
-                        <button class="btn-add-row" onclick="addRow('c_hotel')">
+                        <button type="button" class="btn-add-row" data-add-row="c_hotel">
                             <i class="fas fa-plus"></i> Tambah Hotel
                         </button>
                         <div class="scope-preview">
@@ -1027,7 +1026,7 @@
             {{-- S3: Kereta --}}
             <div class="sub-tab-pane" id="s3-train">
                 <div class="calc-module">
-                    <div class="module-header" onclick="toggleModule('c_train')">
+                    <button type="button" class="module-header" data-module-toggle="c_train" aria-expanded="false" aria-controls="c_train-content">
                         <div class="module-icon scope-teal"><i class="fas fa-train"></i></div>
                         <div class="module-info">
                             <div class="module-badge badge-teal">Cat.6 Kereta</div>
@@ -1036,7 +1035,7 @@
                         </div>
                         <div class="module-preview" id="prev_c_train">0 <span>kg CO₂e</span></div>
                         <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
-                    </div>
+                    </button>
                     <div class="module-content" id="c_train-content">
                         <div class="ref-info-bar">
                             <i class="fas fa-info-circle"></i>
@@ -1070,10 +1069,10 @@
                                         <div class="ef-chip" data-ef-group="c_train">—</div>
                                     </div>
                                 </div>
-                                <button class="btn-remove-row" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
+                                <button type="button" class="btn-remove-row" data-remove-row aria-label="Hapus baris"><i class="fas fa-times"></i></button>
                             </div>
                         </div>
-                        <button class="btn-add-row" onclick="addRow('c_train')">
+                        <button type="button" class="btn-add-row" data-add-row="c_train">
                             <i class="fas fa-plus"></i> Tambah Perjalanan Kereta
                         </button>
                         <div class="scope-preview">
@@ -1086,19 +1085,19 @@
             </div>
 
             <div class="action-buttons">
-                <button class="btn-calculate" onclick="calculateAll('company')">
+                <button type="button" class="btn-calculate" data-calculate-mode="company">
                     <i class="fas fa-calculator"></i> Hitung Total Emisi Perusahaan
                 </button>
-                <button class="btn-reset" onclick="resetCalculator()">
+                <button type="button" class="btn-reset" data-reset-calculator>
                     <i class="fas fa-redo"></i> Reset
                 </button>
             </div>
 
             <div class="step-pane-nav">
-                <button class="btn-step-prev" onclick="switchTab('c',2,4)">
+                <button type="button" class="btn-step-prev" data-switch-tab-prefix="c" data-switch-tab-step="2" data-switch-tab-total="4">
                     <i class="fas fa-arrow-left"></i> Scope 2
                 </button>
-                <button class="btn-step-next" onclick="switchTab('c',4,4)">
+                <button type="button" class="btn-step-next" data-switch-tab-prefix="c" data-switch-tab-step="4" data-switch-tab-total="4">
                     Lihat Hasil <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -1115,7 +1114,7 @@
             <div id="result-box-company" class="result-box"></div>
 
             <div class="step-pane-nav">
-                <button class="btn-step-prev" onclick="switchTab('c',3,4)">
+                <button type="button" class="btn-step-prev" data-switch-tab-prefix="c" data-switch-tab-step="3" data-switch-tab-total="4">
                     <i class="fas fa-arrow-left"></i> Scope 3
                 </button>
                 <div></div>
@@ -1171,7 +1170,7 @@
             {{-- KONTROL E-COMMERCE: Tombol Aksi Pembelian & Penyimpanan --}}
             <div class="save-action">
                 @Auth
-                    <button class="btn-calculate" onclick="saveCalculationToDatabase(event)" style="display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <button type="button" class="btn-calculate" data-save-calculation style="display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer;">
                         <i class="fas fa-cloud-upload-alt"></i> Simpan Hasil ke Dashboard
                     </button>
                 @else
@@ -1184,7 +1183,7 @@
                 <a href="{{ route('projects.index') }}" class="btn-calculate" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem;">
                     <i class="fas fa-seedling"></i> Cari Proyek & Lakukan Offset
                 </a>
-                <button class="btn-reset" onclick="resetCalculator()">
+                <button type="button" class="btn-reset" data-reset-calculator>
                     <i class="fas fa-redo"></i> Hitung Ulang
                 </button>
             </div>
@@ -1195,7 +1194,7 @@
             </div>
         </div>
         <div class="step-pane-nav">
-            <button class="btn-step-prev" onclick="switchTab('p',3,4)">
+            <button type="button" class="btn-step-prev" data-switch-tab-prefix="p" data-switch-tab-step="3" data-switch-tab-total="4">
                 <i class="fas fa-arrow-left"></i> Scope 3
             </button>
             <div></div>
@@ -1262,7 +1261,6 @@
 <script>
     // Definisikan key SEBELUM file calculator.js dimuat agar terbaca sempurna
     window.CARBON_STORAGE_KEY = @auth "{{ 'carbon_history_user_' . Auth::id() }}" @else null @endauth;
-    window.AIRPORTS_DATA = @json($airports ?? []);
 </script>
 
 <script src="{{ asset('js/calculator.js') }}"></script>

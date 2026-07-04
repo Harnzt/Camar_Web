@@ -120,6 +120,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const projectImage = document.getElementById('projectImage');
 
     if (fileDrop && projectImage) {
+        fileDrop.addEventListener('click', () => projectImage.click());
+
         ['dragover', 'dragenter'].forEach(evt => {
             fileDrop.addEventListener(evt, e => {
                 e.preventDefault();

@@ -62,7 +62,7 @@
                 <p class="step-subtitle">Pilih jenis akun yang sesuai dengan kebutuhan Anda</p>
 
                 <div class="account-types">
-                    <div class="account-card" onclick="selectRole('buyer', this)">
+                    <button type="button" class="account-card" data-role-option="buyer" aria-pressed="false">
                         <div class="account-icon">
                             <i class="fas fa-shopping-cart"></i>
                         </div>
@@ -71,9 +71,9 @@
                         <div class="account-check">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                    </div>
+                    </button>
 
-                    <div class="account-card" onclick="selectRole('seller', this)">
+                    <button type="button" class="account-card" data-role-option="seller" aria-pressed="false">
                         <div class="account-icon">
                             <i class="fas fa-store"></i>
                         </div>
@@ -82,7 +82,7 @@
                         <div class="account-check">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
                 <input type="hidden" id="roleInput" name="role" required>
@@ -96,7 +96,7 @@
                 <p class="step-subtitle">Pilih jenis pengguna yang sesuai dengan Anda</p>
 
                 <div class="account-types">
-                    <div class="account-card" onclick="selectCategory('company', this)">
+                    <button type="button" class="account-card" data-category-option="company" aria-pressed="false">
                         <div class="account-icon">
                             <i class="fas fa-building"></i>
                         </div>
@@ -105,9 +105,9 @@
                         <div class="account-check">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                    </div>
+                    </button>
 
-                    <div class="account-card" onclick="selectCategory('personal', this)">
+                    <button type="button" class="account-card" data-category-option="personal" aria-pressed="false">
                         <div class="account-icon">
                             <i class="fas fa-user"></i>
                         </div>
@@ -116,7 +116,7 @@
                         <div class="account-check">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
                 <input type="hidden" id="categoryInput" name="account_category" required>
@@ -181,7 +181,7 @@
                         <label><i class="fas fa-lock"></i> Password <span class="required">*</span></label>
                         <div class="password-wrapper">
                             <input type="password" id="passwordCompany" name="password" placeholder="Minimal 8 karakter" required>
-                            <button type="button" class="password-toggle" onclick="togglePassword('passwordCompany')">
+                            <button type="button" class="password-toggle" data-password-target="passwordCompany" aria-label="Tampilkan atau sembunyikan password perusahaan">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -191,7 +191,7 @@
                         <label><i class="fas fa-lock"></i> Konfirmasi Password <span class="required">*</span></label>
                         <div class="password-wrapper">
                             <input type="password" id="confirmPasswordCompany" name="confirm_password" placeholder="Ketik ulang password" required>
-                            <button type="button" class="password-toggle" onclick="togglePassword('confirmPasswordCompany')">
+                            <button type="button" class="password-toggle" data-password-target="confirmPasswordCompany" aria-label="Tampilkan atau sembunyikan konfirmasi password perusahaan">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -237,7 +237,7 @@
                         <label><i class="fas fa-lock"></i> Password <span class="required">*</span></label>
                         <div class="password-wrapper">
                             <input type="password" id="passwordPersonal" name="password" placeholder="Minimal 8 karakter" required>
-                            <button type="button" class="password-toggle" onclick="togglePassword('passwordPersonal')">
+                            <button type="button" class="password-toggle" data-password-target="passwordPersonal" aria-label="Tampilkan atau sembunyikan password individu">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -247,7 +247,7 @@
                         <label><i class="fas fa-lock"></i> Konfirmasi Password <span class="required">*</span></label>
                         <div class="password-wrapper">
                             <input type="password" id="confirmPasswordPersonal" name="confirm_password" placeholder="Ketik ulang password" required>
-                            <button type="button" class="password-toggle" onclick="togglePassword('confirmPasswordPersonal')">
+                            <button type="button" class="password-toggle" data-password-target="confirmPasswordPersonal" aria-label="Tampilkan atau sembunyikan konfirmasi password individu">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -274,7 +274,7 @@
                     <!-- Upload Button -->
                     <div class="photo-upload">
                         <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;">
-                        <button type="button" class="btn-upload" onclick="document.getElementById('profilePhotoInput').click()">
+                        <button type="button" class="btn-upload" id="profilePhotoButton">
                             <i class="fas fa-cloud-upload-alt"></i>
                             Pilih Foto
                         </button>
@@ -282,11 +282,11 @@
                     </div>
 
                     <!-- Crop Modal -->
-                    <div class="crop-modal" id="cropModal" style="display:none;">
-                        <div class="crop-content">
+                    <div class="crop-modal" id="cropModal" role="dialog" aria-modal="true" aria-labelledby="cropModalTitle" aria-hidden="true" style="display:none;">
+                        <div class="crop-content" tabindex="-1">
                             <div class="crop-header">
-                                <h3>Crop Foto Profil</h3>
-                                <button type="button" class="btn-close-crop" onclick="closeCropModal()">
+                                <h3 id="cropModalTitle">Crop Foto Profil</h3>
+                                <button type="button" class="btn-close-crop" data-close-crop aria-label="Tutup crop foto">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -294,8 +294,8 @@
                                 <img id="cropImage" src="" alt="Crop preview">
                             </div>
                             <div class="crop-actions">
-                                <button type="button" class="btn-crop-cancel" onclick="closeCropModal()">Batal</button>
-                                <button type="button" class="btn-crop-save" onclick="saveCroppedImage()">
+                                <button type="button" class="btn-crop-cancel" data-close-crop>Batal</button>
+                                <button type="button" class="btn-crop-save" id="saveCropButton">
                                     <i class="fas fa-check"></i>
                                     Simpan
                                 </button>
@@ -468,11 +468,11 @@
 
             <!-- Navigation Buttons -->
             <div class="form-navigation">
-                <button type="button" class="btn-prev" id="prevBtn" onclick="changeStep(-1)">
+                <button type="button" class="btn-prev" id="prevBtn" data-step-direction="-1">
                     <i class="fas fa-arrow-left"></i>
                     Kembali
                 </button>
-                <button type="button" class="btn-next" id="nextBtn" onclick="changeStep(1)">
+                <button type="button" class="btn-next" id="nextBtn" data-step-direction="1">
                     Lanjut
                     <i class="fas fa-arrow-right"></i>
                 </button>

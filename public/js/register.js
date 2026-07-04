@@ -14,6 +14,7 @@ let currentStep = 1;
 let cropper = null;
 let selectedAccountType = null;
 let selectedCategoryType = null;
+let lastCropTrigger = null;
 
 // ====================================
 // STEP 1 — Account Role Selection
@@ -24,8 +25,10 @@ function selectRole(type, element) {
 
     document.querySelectorAll('[data-step="1"] .account-card').forEach(card => {
         card.classList.remove('selected');
+        card.setAttribute('aria-pressed', 'false');
     });
     element.classList.add('selected');
+    element.setAttribute('aria-pressed', 'true');
 
     // Show/hide seller docs section
     const sellerDocs = document.getElementById('sellerDocs');
@@ -41,8 +44,10 @@ function selectCategory(category, element) {
 
     document.querySelectorAll('[data-step="2"] .account-card').forEach(card => {
         card.classList.remove('selected');
+        card.setAttribute('aria-pressed', 'false');
     });
     element.classList.add('selected');
+    element.setAttribute('aria-pressed', 'true');
 }
 
 // ====================================
@@ -349,11 +354,19 @@ document.getElementById('profilePhotoInput').addEventListener('change', function
     const reader = new FileReader();
     reader.onload = function (event) {
         document.getElementById('cropImage').src = event.target.result;
-        document.getElementById('cropModal').style.display = 'flex';
+        openCropModal();
         initCropper();
     };
     reader.readAsDataURL(file);
 });
+
+function openCropModal() {
+    const modal = document.getElementById('cropModal');
+    lastCropTrigger = document.activeElement;
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    modal.querySelector('.crop-content')?.focus();
+}
 
 function initCropper() {
     const image = document.getElementById('cropImage');
@@ -375,12 +388,17 @@ function initCropper() {
 }
 
 function closeCropModal() {
-    document.getElementById('cropModal').style.display = 'none';
+    const modal = document.getElementById('cropModal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
     if (cropper) {
         cropper.destroy();
         cropper = null;
     }
     document.getElementById('profilePhotoInput').value = '';
+    if (lastCropTrigger instanceof HTMLElement) {
+        lastCropTrigger.focus();
+    }
 }
 
 function saveCroppedImage() {
@@ -461,6 +479,39 @@ window.addEventListener('DOMContentLoaded', function () {
         }
     `;
     document.head.appendChild(style);
+
+    document.querySelectorAll('[data-role-option]').forEach(button => {
+        button.addEventListener('click', () => selectRole(button.dataset.roleOption, button));
+    });
+
+    document.querySelectorAll('[data-category-option]').forEach(button => {
+        button.addEventListener('click', () => selectCategory(button.dataset.categoryOption, button));
+    });
+
+    document.querySelectorAll('[data-password-target]').forEach(button => {
+        button.addEventListener('click', () => togglePassword(button.dataset.passwordTarget));
+    });
+
+    document.getElementById('profilePhotoButton')?.addEventListener('click', () => {
+        document.getElementById('profilePhotoInput')?.click();
+    });
+
+    document.querySelectorAll('[data-close-crop]').forEach(button => {
+        button.addEventListener('click', closeCropModal);
+    });
+
+    document.getElementById('saveCropButton')?.addEventListener('click', saveCroppedImage);
+
+    document.querySelectorAll('[data-step-direction]').forEach(button => {
+        button.addEventListener('click', () => changeStep(Number(button.dataset.stepDirection)));
+    });
+
+    document.addEventListener('keydown', (event) => {
+        const modal = document.getElementById('cropModal');
+        if (event.key === 'Escape' && modal?.getAttribute('aria-hidden') === 'false') {
+            closeCropModal();
+        }
+    });
 
     // Show step 1
     showStep(1);

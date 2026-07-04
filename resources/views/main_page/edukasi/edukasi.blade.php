@@ -15,7 +15,10 @@
     <!-- Section 1: Hero -->
     <section class="edukasi-hero">
         <div class="edukasi-hero-bg">
-            <img src="{{ asset('images/forest0.png') }}" alt="Climate Education">
+            <picture>
+                <source type="image/webp" srcset="{{ asset('images/forest0-960.webp') }} 960w, {{ asset('images/forest0-1920.webp') }} 1920w" sizes="100vw">
+                <img src="{{ asset('images/forest0.png') }}" alt="" width="2816" height="1536" fetchpriority="high" decoding="async">
+            </picture>
         </div>
         <div class="container">
             <div class="edukasi-hero-content">
