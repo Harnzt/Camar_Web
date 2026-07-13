@@ -398,7 +398,7 @@
                     </h2>
                 </div>
                 <div class="panel-body">
-                    @php $completedTrx = $transactions->where('status', 'completed'); @endphp
+                    @php $completedTrx = $certificateOrders ?? $transactions->where('status', 'completed'); @endphp
                     @if($completedTrx->count() > 0)
                         <div class="cert-list">
                             @foreach($completedTrx as $trx)
@@ -413,9 +413,9 @@
                                     <span class="cert-detail">{{ $trx->offset_ton }} ton CO₂ · {{ $trx->project->name ?? '-' }}</span>
                                     <span class="cert-number">{{ $trx->certificate_number }}</span>
                                 </div>
-                                <button class="cert-download" onclick="downloadCertificate('{{ $trx->id }}')">
+                                <a class="cert-download" href="{{ route('buyer.certificates.show', $trx) }}" target="_blank" rel="noopener">
                                     <i class="fas fa-download"></i> Unduh
-                                </button>
+                                </a>
                             </div>
                             @endforeach
                         </div>

@@ -77,6 +77,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/transactions',           [SellerDashboardController::class, 'transactions'])->middleware('role:seller')->name('transactions.index');
     // DashboardsBuyer
     Route::get('/buyer/transactions', [BuyerDashboardController::class, 'transactions'])->middleware('role:buyer')->name('buyer.transactions');
+    Route::get('/buyer/certificates/{order}', [BuyerDashboardController::class, 'certificate'])
+        ->middleware('role:buyer')
+        ->name('buyer.certificates.show');
 
     //Simpan Perhitungan
     Route::post('/calculator/save', [CalculatorController::class, 'store'])->middleware('role:buyer');
@@ -131,7 +134,7 @@ Route::middleware(['auth', 'role:admin,auditor,super_admin'])
                 ->name('projects.update');
         });
 
-        Route::middleware('permission:transactions.manage')->group(function () {
+        Route::middleware('permission:transactions.manage|certificates.issue')->group(function () {
             Route::get('/transactions', [TransactionManagementController::class, 'index'])
                 ->name('transactions.index');
             Route::patch('/transactions/{order}', [TransactionManagementController::class, 'update'])

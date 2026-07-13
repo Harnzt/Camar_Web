@@ -113,7 +113,7 @@ class CalculatorController extends Controller
                         ['label' => 'Konsumsi listrik', 'value_kg' => $details->get('electricity', 0)],
                     ],
                     'scope3' => [
-                        ['label' => 'Penerbangan', 'value_kg' => $details->get('flight', $details->get('transit', 0))],
+                        ['label' => 'Transportasi umum & pesawat', 'value_kg' => $details->get('transit', 0) + $details->get('flight', 0)],
                         ['label' => 'Konsumsi makanan', 'value_kg' => $details->get('food', 0)],
                         ['label' => 'Penggunaan air', 'value_kg' => $details->get('water', 0)],
                         ['label' => 'Pengelolaan limbah', 'value_kg' => $details->get('waste', 0)],

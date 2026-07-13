@@ -58,6 +58,14 @@ class BuyerDashboardController extends Controller
             ->take(5)
             ->get();
 
+        $certificateOrders = Order::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->whereNotNull('certificate_number')
+            ->with('project')
+            ->latest('certificate_issued_at')
+            ->take(5)
+            ->get();
+
         // ── Rekomendasi Proyek ────────────────────────────────
         $recommendedProjects = $this->recommendationService
             ->recommend($user, $emission, 3);
@@ -71,6 +79,7 @@ class BuyerDashboardController extends Controller
             'totalTransactions',
             'totalSpent',
             'transactions', // Tetap dilempar sebagai $transactions untuk keamanan view blade
+            'certificateOrders',
             'recommendedProjects',
         ));
     }
@@ -175,5 +184,15 @@ class BuyerDashboardController extends Controller
         ];
 
         return view('main_page.dashboard-buyer.transactions', compact('orders', 'stats'));
+    }
+
+    public function certificate(Order $order)
+    {
+        abort_unless($order->user_id === Auth::id(), 403);
+        abort_unless($order->status === 'completed' && filled($order->certificate_number), 404);
+
+        $order->load(['project.seller', 'certificateIssuer', 'user']);
+
+        return view('main_page.dashboard-buyer.certificate', compact('order'));
     }
 }

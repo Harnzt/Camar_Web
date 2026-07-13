@@ -151,7 +151,7 @@ class User extends Authenticatable
         return match ($this->role) {
             'buyer' => 'Buyer',
             'seller' => 'Seller',
-            'auditor' => 'Auditor',
+            'auditor' => 'Auditor Pemerintah',
             'admin' => 'Admin',
             'super_admin' => 'Super Admin',
             default => 'User',

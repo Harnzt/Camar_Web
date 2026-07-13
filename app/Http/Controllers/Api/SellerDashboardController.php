@@ -4,13 +4,23 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProjectResource;
+use App\Models\DocumentVerification;
 use App\Models\Order;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 
 class SellerDashboardController extends Controller
 {
+    private const PROJECT_DOCUMENT_FIELDS = [
+        'methodology_document' => 'Dokumen Metodologi',
+        'verification_certificate' => 'Sertifikat Verifikasi',
+        'location_map' => 'Peta Lokasi',
+        'mrv_report' => 'Laporan MRV',
+    ];
+
     public function __invoke(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -41,13 +51,22 @@ class SellerDashboardController extends Controller
     {
         $validated = $this->validateProject($request);
         $user = $request->user();
+        $projectPayload = $this->projectPayload($validated);
+        $projectPayload['company_name'] = $projectPayload['company_name']
+            ?? $user->company_name
+            ?? 'Mitra CAMAR';
 
-        $project = Project::create($validated + [
+        if ($image = $this->storeProjectImage($request)) {
+            $projectPayload['image'] = $image;
+        }
+
+        $project = Project::create($projectPayload + [
             'seller_id' => $user->id,
-            'company_name' => $validated['company_name'] ?? $user->company_name ?? 'Mitra CAMAR',
             'verification_status' => 'pending',
             'submitted_at' => now(),
         ]);
+
+        $this->storeProjectDocuments($request, $project);
 
         return response()->json([
             'message' => 'Proyek berhasil diajukan dan menunggu verifikasi admin.',
@@ -60,7 +79,13 @@ class SellerDashboardController extends Controller
         abort_unless((int) $project->seller_id === (int) $request->user()->id, 404);
 
         $validated = $this->validateProject($request);
-        $project->update($validated + [
+        $projectPayload = $this->projectPayload($validated);
+
+        if ($image = $this->storeProjectImage($request, $project)) {
+            $projectPayload['image'] = $image;
+        }
+
+        $project->update($projectPayload + [
             'verification_status' => 'pending',
             'reviewed_by' => null,
             'reviewed_at' => null,
@@ -68,6 +93,8 @@ class SellerDashboardController extends Controller
             'admin_notes' => null,
             'submitted_at' => now(),
         ]);
+
+        $this->storeProjectDocuments($request, $project->fresh());
 
         return response()->json([
             'message' => 'Data proyek diperbarui dan diajukan kembali untuk verifikasi.',
@@ -113,7 +140,81 @@ class SellerDashboardController extends Controller
             'verified_year' => ['nullable', 'integer', 'min:1900'],
             'description' => ['required', 'string'],
             'methodology' => ['nullable', 'string'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'methodology_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'verification_certificate' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'location_map' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'mrv_report' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
         ]);
+    }
+
+    private function projectPayload(array $validated): array
+    {
+        unset($validated['image']);
+
+        foreach (array_keys(self::PROJECT_DOCUMENT_FIELDS) as $field) {
+            unset($validated[$field]);
+        }
+
+        return $validated;
+    }
+
+    private function storeProjectImage(Request $request, ?Project $project = null): ?string
+    {
+        if (!$request->hasFile('image')) {
+            return null;
+        }
+
+        if ($project?->image && file_exists(public_path('images/'.$project->image))) {
+            unlink(public_path('images/'.$project->image));
+        }
+
+        $file = $request->file('image');
+        $filename = 'project_'.$request->user()->id.'_'.now()->format('YmdHis').'_'.Str::random(8).'.'.$file->extension();
+        $file->move(public_path('images'), $filename);
+
+        return $filename;
+    }
+
+    private function storeProjectDocuments(Request $request, Project $project): void
+    {
+        foreach (self::PROJECT_DOCUMENT_FIELDS as $field => $label) {
+            if (!$request->hasFile($field)) {
+                continue;
+            }
+
+            $path = $this->storePrivateProjectDocument(
+                $request->file($field),
+                $project,
+                $field
+            );
+
+            DocumentVerification::updateOrCreate(
+                [
+                    'user_id' => $project->seller_id,
+                    'document_type' => "project_{$project->id}_{$field}",
+                ],
+                [
+                    'document_path' => $path,
+                    'status' => 'pending',
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                    'rejection_reason' => null,
+                    'notes' => "{$label} untuk proyek {$project->name}.",
+                ]
+            );
+        }
+    }
+
+    private function storePrivateProjectDocument(UploadedFile $file, Project $project, string $field): string
+    {
+        $filename = $field.'_'.now()->format('YmdHis').'_'.Str::random(8).'.'.$file->getClientOriginalExtension();
+
+        return $file->storeAs(
+            "project-documents/{$project->seller_id}/{$project->id}",
+            $filename,
+            'private'
+        );
     }
 
     private function sellerProjects(int $sellerId)

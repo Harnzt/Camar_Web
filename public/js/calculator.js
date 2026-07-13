@@ -253,6 +253,8 @@ function updateFlightRoute(inputOrRow) {
     if (!row) return 0;
 
     const group = row.dataset.group;
+    const isTransitFlight = group === 'p_transit'
+        && row.querySelector('[name="p_transit_mode[]"]')?.value === 'plane';
     const originInput = row.querySelector(`[name="${group}_origin[]"]`);
     const destinationInput = row.querySelector(`[name="${group}_destination[]"]`);
     const distanceInput = row.querySelector(`[name="${group}_km[]"]`);
@@ -261,6 +263,7 @@ function updateFlightRoute(inputOrRow) {
     const destination = findAirport(destinationInput?.value);
 
     if (!distanceInput) return 0;
+    if (group === 'p_transit' && !isTransitFlight) return parseFloat(distanceInput.value) || 0;
 
     if (!origin || !destination) {
         scheduleAirportSearch(originInput);
@@ -284,7 +287,39 @@ function updateFlightRoute(inputOrRow) {
 }
 
 function updateAllFlightRoutes() {
-    document.querySelectorAll('[data-group="p_flight"], [data-group="c_flight"]').forEach(updateFlightRoute);
+    document.querySelectorAll('[data-group="p_transit"], [data-group="p_flight"], [data-group="c_flight"]').forEach(updateFlightRoute);
+}
+
+function updateTransitModeFields(modeSelectOrRow) {
+    const row = modeSelectOrRow?.classList?.contains('entry-row')
+        ? modeSelectOrRow
+        : modeSelectOrRow?.closest?.('.entry-row');
+    if (!row || row.dataset.group !== 'p_transit') return;
+
+    const isPlane = row.querySelector('[name="p_transit_mode[]"]')?.value === 'plane';
+    const distanceInput = row.querySelector('[name="p_transit_km[]"]');
+    const label = row.querySelector('.transit-distance-label');
+    const unit = row.querySelector('.transit-distance-unit');
+    const hint = row.querySelector('.flight-distance-hint');
+
+    row.querySelectorAll('.transit-flight-only').forEach((field) => {
+        field.hidden = !isPlane;
+    });
+
+    if (distanceInput) {
+        distanceInput.readOnly = isPlane;
+        distanceInput.classList.toggle('flight-distance', isPlane);
+        if (!isPlane && distanceInput.value === '0') distanceInput.value = '';
+    }
+    if (label) label.textContent = isPlane ? 'Jarak Penerbangan' : 'Jarak Bulanan';
+    if (unit) unit.textContent = isPlane ? 'km' : 'km/bln';
+    if (hint && !isPlane) hint.textContent = 'Pilih asal dan tujuan bandara';
+
+    if (isPlane) updateFlightRoute(row);
+}
+
+function updateAllTransitModeFields() {
+    document.querySelectorAll('[data-group="p_transit"]').forEach(updateTransitModeFields);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -521,14 +556,17 @@ function organisePersonalCalculator() {
     const scope2Slot = document.getElementById('personal-scope2-modules');
     const scope3Slot = document.getElementById('personal-scope3-modules');
     const electricityModule = document.getElementById('p_electricity-content')?.closest('.calc-module');
-    const flightModule = document.getElementById('p_flight-content')?.closest('.calc-module');
+    const transitModule = document.getElementById('p_transit-content')?.closest('.calc-module');
+    const personalFlightModule = document.getElementById('p_flight-content')?.closest('.calc-module');
 
     if (scope2Slot && electricityModule) {
         scope2Slot.appendChild(electricityModule);
     }
-
-    if (scope3Slot && flightModule) {
-        scope3Slot.appendChild(flightModule);
+    if (scope3Slot && transitModule) {
+        scope3Slot.appendChild(transitModule);
+    }
+    if (personalFlightModule) {
+        personalFlightModule.remove();
     }
 }
 
@@ -547,6 +585,7 @@ function addRow(group) {
     newRow.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
 
     container.appendChild(newRow);
+    updateTransitModeFields(newRow);
     newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
@@ -560,6 +599,7 @@ function removeRow(btn) {
         row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
         row.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
         row.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
+        updateTransitModeFields(row);
     } else {
         row.remove();
     }
@@ -586,7 +626,11 @@ function updateEfChip(selectEl, group) {
     else if (group === 'p_energy')                   efData = getFuelEF(val);
     else if (group === 'p_food')                     efData = getFoodEF(val);
     else if (group === 'p_flight')                   efData = getTransitEF(val);
-    else if (group === 'p_transit')                  efData = getTransitEF(val);
+    else if (group === 'p_transit') {
+        const mode = row?.querySelector('[name="p_transit_mode[]"]')?.value;
+        const cabinClass = row?.querySelector('[name="p_transit_class[]"]')?.value || 'economy';
+        efData = getTransitEF(mode === 'plane' ? cabinClass : mode);
+    }
 
     if (efData) {
         chip.innerHTML = `${efData.display || efData.ef} ${efData.unit}<br><small>${efData.ref}</small>`;
@@ -618,6 +662,7 @@ function calcLive() {
     setPreview('p_energy',      r.energy_rt);
     setPreview('p_vehicle',     r.vehicle);
     setPreview('p_electricity', r.electricity);
+    setPreview('p_transit',     r.transit);
     setPreview('p_flight',      r.flight);
     setPreview('p_food',        r.food);
     setPreview('p_water',       r.water);
@@ -625,6 +670,7 @@ function calcLive() {
     setSub('p_energy',      r.energy_rt);
     setSub('p_electricity', r.electricity);
     setSub('p_vehicle',     r.vehicle);
+    setSub('p_transit',     r.transit);
     setSub('p_flight',      r.flight);
     setSub('p_food',        r.food);
     setSub('p_water',       r.water);
@@ -698,12 +744,22 @@ function calcPersonalAll() {
     // Listrik (monthly kWh × 12 × 0.8099)
     const electricity = v('p_elec_kwh') * 12 * EF_DB.grid.household.ef;
 
-    // Penerbangan (pax x km x ef)
-    let flight = 0;
-    rowTriples('p_flight_class','p_flight_pax','p_flight_km').forEach(([cls, pax, km]) => {
-        const ef = getTransitEF(cls);
-        if (ef) flight += pax * km * ef.ef;
+    // Transportasi umum, ojol, dan pesawat
+    let transit = 0;
+    document.querySelectorAll('[data-group="p_transit"]').forEach((row) => {
+        const mode = row.querySelector('[name="p_transit_mode[]"]')?.value;
+        const pax = parseFloat(row.querySelector('[name="p_transit_pax[]"]')?.value) || 0;
+        const km = parseFloat(row.querySelector('[name="p_transit_km[]"]')?.value) || 0;
+        const cabinClass = row.querySelector('[name="p_transit_class[]"]')?.value || 'economy';
+        const ef = getTransitEF(mode === 'plane' ? cabinClass : mode);
+        if (!ef) return;
+
+        transit += mode === 'plane'
+            ? pax * km * ef.ef
+            : pax * km * 12 * ef.ef;
     });
+
+    const flight = 0;
 
     // Pangan (monthly × 12)
     let food = 0;
@@ -718,7 +774,7 @@ function calcPersonalAll() {
     // Sampah (monthly × 12)
     const waste = v('p_waste_kg') * 12 * EF_DB.waste.ef;
 
-    return { energy_rt, vehicle, electricity, flight, food, water, waste };
+    return { energy_rt, vehicle, electricity, transit, flight, food, water, waste };
 }
 
 // ── Company totals ─────────────────────────────────────────────────────────────
@@ -853,12 +909,13 @@ function renderPersonalResult(cats, totalKg) {
     const totalTon = totalKg / 1000;
     const scope1 = cats.energy_rt + cats.vehicle;
     const scope2 = cats.electricity;
-    const scope3 = cats.flight + cats.food + cats.water + cats.waste;
+    const transport = (cats.transit || 0) + (cats.flight || 0);
+    const scope3 = transport + cats.food + cats.water + cats.waste;
     const items = [
         { label: 'Scope 1 — Energi Rumah Tangga', kg: cats.energy_rt },
         { label: 'Scope 1 — Kendaraan Pribadi', kg: cats.vehicle },
         { label: 'Scope 2 — Listrik', kg: cats.electricity },
-        { label: 'Scope 3 — Penerbangan', kg: cats.flight },
+        { label: 'Scope 3 - Transportasi Umum', kg: transport },
         { label: 'Scope 3 — Pangan', kg: cats.food },
         { label: 'Scope 3 — Air Bersih', kg: cats.water },
         { label: 'Scope 3 — Limbah', kg: cats.waste },
@@ -1065,6 +1122,7 @@ function resetCalculator() {
     document.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
     document.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
     document.querySelectorAll('.preview-value').forEach(el => el.textContent = '0');
+    updateAllTransitModeFields();
 
     const rBox = document.getElementById('result-box');
     if (rBox) rBox.style.display = 'none';
@@ -1081,6 +1139,7 @@ function initAll() {
 
     document.querySelectorAll('select[name$="_fuel[]"], select[name$="_src[]"], select[name$="_mode[]"], select[name$="_type[]"], select[name$="_class[]"], select[name$="_fuel_type[]"], select[name$="_dist_fuel[]"]').forEach(sel => {
         sel.addEventListener('change', () => {
+            updateTransitModeFields(sel);
             const grpAttr = sel.closest('.entry-row')?.querySelector('.ef-chip[data-ef-group]');
             if (grpAttr) {
                 const g = grpAttr.dataset.efGroup;
@@ -1092,6 +1151,7 @@ function initAll() {
     document.querySelectorAll('input[type=number]').forEach(inp => {
         inp.addEventListener('input', calcLive);
     });
+    updateAllTransitModeFields();
 }
 
 // ====================================
@@ -1442,6 +1502,7 @@ window.addRow         = addRow;
 window.removeRow      = removeRow;
 window.updateEfChip   = updateEfChip;
 window.updateVehicleFuel = updateVehicleFuel;
+window.updateTransitModeFields = updateTransitModeFields;
 window.normaliseAirportField = normaliseAirportField;
 window.updateFlightRoute = updateFlightRoute;
 window.calcLive       = calcLive;

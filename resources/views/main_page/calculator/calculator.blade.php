@@ -288,7 +288,7 @@
             <div class="step-pane-nav">
                 <div></div>
                 <button type="button" class="btn-step-next" data-switch-tab-prefix="p" data-switch-tab-step="2" data-switch-tab-total="4">
-                    Scope 2 — Listrik <i class="fas fa-arrow-right"></i>
+                    Scope 2 - Listrik <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </div>
@@ -298,11 +298,90 @@
 
             <div class="scope-label-banner scope2-banner">
                 <i class="fas fa-bolt"></i>
-                Scope 2 — Emisi Tidak Langsung Energi
-                <span>Emisi yang berasal dari konsumsi listrik jaringan</span>
+                Scope 2 - Listrik
+                <span>Konsumsi listrik dari jaringan PLN atau sumber energi tidak langsung</span>
             </div>
 
             <div id="personal-scope2-modules"></div>
+
+            <div class="calc-module">
+                <button type="button" class="module-header" data-module-toggle="p_transit" aria-expanded="false" aria-controls="p_transit-content">
+                    <div class="module-icon scope-teal"><i class="fas fa-bus"></i></div>
+                    <div class="module-info">
+                        <div class="module-badge badge-teal">Scope 3</div>
+                        <h2 class="module-title">Transportasi Umum</h2>
+                        <p class="module-subtitle">Bus, kereta, ojol, dan pesawat</p>
+                    </div>
+                    <div class="module-preview" id="prev_p_transit">0 <span>kg CO₂e</span></div>
+                    <div class="module-toggle"><i class="fas fa-chevron-down"></i></div>
+                </button>
+                <div class="module-content" id="p_transit-content">
+
+                    <div class="ref-info-bar">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Faktor emisi: GHG Protocol Scope 3 · Buku II Vol I KLHK 2012 · berbasis penumpang-km</span>
+                    </div>
+
+                    <div id="rows_p_transit">
+                        <div class="entry-row" data-group="p_transit">
+                            <div class="entry-fields">
+                                <div class="input-group">
+                                    <label class="input-label">Moda Transportasi</label>
+                                    <select class="input-field select-field" name="p_transit_mode[]" onchange="updateTransitModeFields(this); updateEfChip(this,'p_transit'); calcLive()">
+                                        <option value="">-- Pilih Moda --</option>
+                                        <option value="bus">Bus / Angkot / Ojol</option>
+                                        <option value="train">Kereta / KRL / MRT</option>
+                                        <option value="plane">Pesawat</option>
+                                    </select>
+                                </div>
+                                <div class="input-group transit-flight-only" hidden>
+                                    <label class="input-label">Kelas Kabin</label>
+                                    <select class="input-field select-field" name="p_transit_class[]" onchange="updateEfChip(this,'p_transit'); calcLive()">
+                                        <option value="economy">Ekonomi</option>
+                                        <option value="business">Bisnis</option>
+                                        <option value="first">First Class</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label">Jumlah Pax</label>
+                                    <input type="number" class="input-field" name="p_transit_pax[]" placeholder="1" min="0" step="1" oninput="calcLive()">
+                                </div>
+                                <div class="input-group transit-flight-only" hidden>
+                                    <label class="input-label">Asal Penerbangan</label>
+                                    <input type="text" class="input-field airport-input" name="p_transit_origin[]" list="airport-options" placeholder="IATA atau nama bandara" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
+                                </div>
+                                <div class="input-group transit-flight-only" hidden>
+                                    <label class="input-label">Tujuan Penerbangan</label>
+                                    <input type="text" class="input-field airport-input" name="p_transit_destination[]" list="airport-options" placeholder="IATA atau nama bandara" oninput="updateFlightRoute(this); calcLive()" onchange="normaliseAirportField(this); updateFlightRoute(this); calcLive()" onblur="normaliseAirportField(this); updateFlightRoute(this); calcLive()">
+                                </div>
+                                <div class="input-group">
+                                    <label class="input-label transit-distance-label">Jarak Bulanan</label>
+                                    <div class="input-with-unit">
+                                        <input type="number" class="input-field" name="p_transit_km[]" placeholder="0" min="0" step="0.1" oninput="calcLive()">
+                                        <span class="input-unit transit-distance-unit">km/bln</span>
+                                    </div>
+                                    <span class="input-hint flight-distance-hint transit-flight-only" hidden>Pilih asal dan tujuan bandara</span>
+                                </div>
+                                <div class="input-group ef-display-group">
+                                    <label class="input-label">Faktor Emisi</label>
+                                    <div class="ef-chip" data-ef-group="p_transit">—</div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-remove-row" data-remove-row title="Hapus baris" aria-label="Hapus baris"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-add-row" data-add-row="p_transit">
+                        <i class="fas fa-plus"></i> Tambah Transportasi
+                    </button>
+
+                    <div class="scope-preview">
+                        <span class="preview-label">Sub-total Transportasi Umum:</span>
+                        <span class="preview-value" id="sub_p_transit">0</span>
+                        <span class="preview-unit">kg CO₂e/tahun</span>
+                    </div>
+                </div>
+            </div>
 
             <div class="calc-module">
                 <button type="button" class="module-header" data-module-toggle="p_flight" aria-expanded="false" aria-controls="p_flight-content">
@@ -391,7 +470,7 @@
             <div class="scope-label-banner scope3-banner">
                 <i class="fas fa-globe"></i>
                 Scope 3 — Emisi Tidak Langsung Lainnya
-                <span>Transportasi, konsumsi pangan, penggunaan air, dan limbah</span>
+                <span>Transportasi umum, pesawat, konsumsi pangan, penggunaan air, dan limbah</span>
             </div>
 
             <div id="personal-scope3-modules"></div>

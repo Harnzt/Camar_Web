@@ -33,9 +33,9 @@
                     <i class="fas fa-seedling"></i><span>Verifikasi Proyek</span>
                 </a>
             @endif
-            @if(Auth::user()->hasPermission('transactions.manage'))
+            @if(Auth::user()->hasPermission('transactions.manage') || Auth::user()->hasPermission('certificates.issue'))
                 <a href="{{ route('admin.transactions.index') }}" class="{{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}">
-                    <i class="fas fa-receipt"></i><span>Transaksi</span>
+                    <i class="fas fa-receipt"></i><span>Transaksi & Sertifikat</span>
                 </a>
             @endif
 
