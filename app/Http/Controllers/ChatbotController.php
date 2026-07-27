@@ -161,6 +161,18 @@ PROMPT;
                 $response->json('candidates.0.content.parts.0.text')
                 ?? 'Maaf, saya belum dapat memberikan jawaban saat ini.';
 
+            // Hapus sintaks Markdown
+            $reply = preg_replace('/\*\*(.*?)\*\*/', '$1', $reply);
+            $reply = preg_replace('/\*(.*?)\*/', '$1', $reply);
+            $reply = preg_replace('/__(.*?)__/', '$1', $reply);
+            $reply = preg_replace('/`(.*?)`/', '$1', $reply);
+            $reply = preg_replace('/^#{1,6}\s*/m', '', $reply);
+
+            // Rapikan baris kosong
+            $reply = preg_replace("/\n{3,}/", "\n\n", $reply);
+
+            $reply = trim($reply);
+            
             $history[] = [
                 'role' => 'user',
                 'text' => $userMessage,
