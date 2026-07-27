@@ -64,6 +64,8 @@
     
     <!-- Additional Scripts -->
     @yield('scripts')
+    @include('main_page.components.chatbot-widget')
+    
     
 </body>
 </html>

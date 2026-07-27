@@ -16,7 +16,7 @@ use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\AdminManagementController;
 use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\AuditLogController;
-
+use App\Http\Controllers\ChatbotController;
 
 // ========================================
 // 1. AUTHENTICATION ROUTES
@@ -173,6 +173,10 @@ Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->g
     Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard'); 
     Route::get('/projects/create', [SellerDashboardController::class, 'create'])->name('projects.create');
 });
+
+Route::post('/chatbot/send', [ChatbotController::class, 'send'])
+    ->name('chatbot.send')
+    ->middleware('throttle:30,1');
 
 
 
