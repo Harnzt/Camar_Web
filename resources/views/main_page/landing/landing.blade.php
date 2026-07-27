@@ -16,7 +16,6 @@
      ================================================================ --}}
 @if(Auth::check() && (Auth::user()->isBuyer() || Auth::user()->isSeller()))
     @if(Auth::user()->isBuyer())
-    {{-- HERO BUYER --}}
     <section class="hero-section hero-user" id="home">
         <div class="hero-background">
             <img src="{{ asset('images/landing.png') }}" alt="Background">
@@ -25,7 +24,6 @@
 
         <div class="container">
             <div class="hero-user-inner">
-                {{-- Panel Kiri --}}
                 <div class="hero-user-left animate-fade-in">
                     @if(isset($lastTransaction) && $lastTransaction && in_array($lastTransaction->status, ['pending','paid','verified']))
                     <div class="floating-notif">
@@ -61,7 +59,6 @@
                     </div>
                 </div>
 
-                {{-- Panel Kanan --}}
                 <div class="hero-user-right animate-fade-in-delay">
                     <div class="impact-snapshot">
                         <div class="impact-snapshot-header">
@@ -74,7 +71,7 @@
                         <div class="impact-big-number">
                             <span class="impact-big-unit">setara</span>
                             <span class="impact-big-val">{{ number_format($treeEquivalent ?? 0) }}</span>
-                            <span class="impact-big-unit">🌳 pohon</span>
+                            <span class="impact-big-unit"> pohon</span>
                         </div>
                         <p class="impact-big-desc">
                             Kontribusi total:
@@ -107,7 +104,6 @@
         </div>
     </section>
 
-    {{-- SMART MATCHING --}}
     <section class="projects-section py-5" id="smart-match"> 
         <div class="container">
             
@@ -197,7 +193,6 @@
         </div>
     </section> 
 
-    {{-- KABAR KARBON (Buyer) --}}
     <section class="carbon-news-section">
         <div class="container">
             <div class="section-header-flex">
@@ -252,7 +247,6 @@
      ================================================================ --}}
     @elseif(Auth::user()->isSeller())
 
-    {{-- HERO SELLER --}}
     <section class="hero-section hero-seller" id="home">
         <div class="hero-background">
             <img src="{{ asset('images/landing.png') }}" alt="Background">
@@ -261,7 +255,6 @@
         <div class="container">
             <div class="hero-user-inner">
 
-                {{-- Kiri --}}
                 <div class="hero-user-left animate-fade-in">
                     @if(($pendingCount ?? 0) > 0)
                     <div class="floating-notif warning">
@@ -295,7 +288,6 @@
                     </div>
                 </div>
 
-                {{-- Kanan: Performance Snapshot --}}
                 <div class="hero-user-right animate-fade-in-delay">
                     <div class="seller-snapshot">
                         <div class="impact-snapshot-header">
@@ -339,7 +331,6 @@
         </div>
     </section>
 
-    {{-- PROYEK SELLER DI MARKETPLACE --}}
     <section class="projects-section py-5" id="inventaris-seller"> 
         <div class="container">
         
@@ -440,7 +431,6 @@
         </div>
     </section>
 
-    {{-- MARKET INSIGHT (Seller) --}}
     <section class="carbon-news-section">
         <div class="container">
             <div class="section-header-flex">
@@ -536,10 +526,10 @@
                 </div>
             </div>
         </div>
-        <div class="scroll-indicator">
+        <!-- <div class="scroll-indicator">
             <div class="mouse"><div class="wheel"></div></div>
             <p>Scroll untuk menjelajah</p>
-        </div>
+        </div> -->
     </section>
 
     <div class="section-divider-90"></div>
