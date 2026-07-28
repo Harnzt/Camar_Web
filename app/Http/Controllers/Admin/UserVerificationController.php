@@ -117,15 +117,25 @@ class UserVerificationController extends Controller
             return back()->withErrors(['notes' => 'Catatan wajib diisi untuk dokumen yang ditolak atau perlu revisi.']);
         }
 
-        $old = $document->only(['status', 'reviewed_by', 'reviewed_at', 'rejection_reason', 'notes']);
+        $old = [];
+        $userStatusChange = null;
 
-        $document->update([
-            'status' => $validated['status'],
-            'reviewed_by' => auth()->id(),
-            'reviewed_at' => now(),
-            'rejection_reason' => $validated['status'] === 'rejected' ? $validated['notes'] : null,
-            'notes' => $validated['notes'],
-        ]);
+        DB::transaction(function () use ($document, $validated, &$old, &$userStatusChange) {
+            $document->loadMissing('user');
+
+            $old = $document->only(['status', 'reviewed_by', 'reviewed_at', 'rejection_reason', 'notes']);
+
+            $document->update([
+                'status' => $validated['status'],
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
+                'rejection_reason' => $validated['status'] === 'rejected' ? $validated['notes'] : null,
+                'notes' => $validated['notes'],
+            ]);
+
+            $document->refresh()->load('user');
+            $userStatusChange = $this->syncUserStatusFromDocuments($document->user);
+        });
 
         $this->audit->log(
             'document.reviewed',
@@ -135,7 +145,71 @@ class UserVerificationController extends Controller
             $document->only(array_keys($old))
         );
 
+        if ($userStatusChange) {
+            $this->audit->log(
+                'user.status.synced_from_documents',
+                "Status akun {$document->user->email} disesuaikan berdasarkan hasil verifikasi dokumen.",
+                $document->user,
+                $userStatusChange['old'],
+                $userStatusChange['new']
+            );
+        }
+
         return back()->with('success', 'Status dokumen berhasil diperbarui.');
+    }
+
+    private function syncUserStatusFromDocuments(?User $user): ?array
+    {
+        if (! $user || $user->isAdministrator() || $user->isSuspended()) {
+            return null;
+        }
+
+        $documents = $user->documentVerifications()
+            ->get(['id', 'status', 'reviewed_at', 'rejection_reason', 'notes', 'updated_at']);
+
+        if ($documents->isEmpty()) {
+            return null;
+        }
+
+        $nextStatus = null;
+        $reason = null;
+
+        if ($documents->contains(fn (DocumentVerification $item) => $item->status === 'rejected')) {
+            $latestRejected = $documents
+                ->where('status', 'rejected')
+                ->sortByDesc(fn (DocumentVerification $item) => $item->reviewed_at?->timestamp ?? $item->updated_at?->timestamp ?? 0)
+                ->first();
+
+            $nextStatus = 'rejected';
+            $reason = $latestRejected?->rejection_reason ?: $latestRejected?->notes;
+        } elseif ($documents->every(fn (DocumentVerification $item) => $item->status === 'approved')) {
+            $nextStatus = 'verified';
+        } elseif (in_array($user->status, ['verified', 'rejected'], true)) {
+            $nextStatus = 'pending';
+        }
+
+        if (! $nextStatus || $user->status === $nextStatus) {
+            return null;
+        }
+
+        $old = $user->only([
+            'status', 'verified_by', 'verified_at', 'rejection_reason',
+            'suspended_at', 'suspension_reason',
+        ]);
+
+        $user->forceFill([
+            'status' => $nextStatus,
+            'verified_by' => $nextStatus === 'verified' ? auth()->id() : $user->verified_by,
+            'verified_at' => $nextStatus === 'verified' ? now() : $user->verified_at,
+            'rejection_reason' => $nextStatus === 'rejected' ? $reason : null,
+            'suspended_at' => null,
+            'suspension_reason' => null,
+        ])->save();
+
+        return [
+            'old' => $old,
+            'new' => $user->only(array_keys($old)),
+        ];
     }
 
     public function download(DocumentVerification $document)

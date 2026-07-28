@@ -36,8 +36,8 @@ test('buyer cannot access admin dashboard', function () {
         ->assertForbidden();
 });
 
-test('admin can access dashboard and review a document', function () {
-    $admin = createAdministrativeUser('admin');
+test('auditor can access dashboard and review a document', function () {
+    $auditor = createAdministrativeUser('auditor');
     $buyer = User::create([
         'name' => 'Buyer Review',
         'email' => 'buyer-review@example.test',
@@ -53,11 +53,11 @@ test('admin can access dashboard and review a document', function () {
         'status' => 'pending',
     ]);
 
-    $this->actingAs($admin)
+    $this->actingAs($auditor)
         ->get(route('admin.dashboard'))
         ->assertOk();
 
-    $this->actingAs($admin)
+    $this->actingAs($auditor)
         ->patch(route('admin.documents.update', $document), [
             'status' => 'approved',
             'notes' => 'Dokumen valid.',
@@ -65,7 +65,40 @@ test('admin can access dashboard and review a document', function () {
         ->assertRedirect();
 
     expect($document->fresh()->status)->toBe('approved')
+        ->and($buyer->fresh()->status)->toBe('verified')
+        ->and($buyer->fresh()->verified_by)->toBe($auditor->id)
         ->and(AdminActivityLog::where('action', 'document.reviewed')->exists())->toBeTrue();
+});
+
+test('account status follows rejected document review', function () {
+    $auditor = createAdministrativeUser('auditor');
+    $seller = User::create([
+        'name' => 'Seller Review',
+        'email' => 'seller-review@example.test',
+        'password' => 'password',
+        'role' => 'seller',
+        'account_category' => 'company',
+        'status' => 'pending',
+    ]);
+    $document = DocumentVerification::create([
+        'user_id' => $seller->id,
+        'document_type' => 'nib',
+        'document_path' => 'documents/nib.pdf',
+        'status' => 'pending',
+    ]);
+
+    $this->actingAs($auditor)
+        ->patch(route('admin.documents.update', $document), [
+            'status' => 'rejected',
+            'notes' => 'Nomor dokumen tidak sesuai.',
+        ])
+        ->assertRedirect();
+
+    $seller->refresh();
+
+    expect($document->fresh()->status)->toBe('rejected')
+        ->and($seller->status)->toBe('rejected')
+        ->and($seller->rejection_reason)->toBe('Nomor dokumen tidak sesuai.');
 });
 
 test('regular admin cannot manage administrator accounts', function () {
