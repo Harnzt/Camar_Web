@@ -10,15 +10,11 @@ use Illuminate\Support\Facades\Log;
 
 class ChatbotController extends Controller
 {
-    /**
-     * System Prompt
-     */
     protected function systemPrompt(): string
     {
         return <<<PROMPT
-// Tempelkan seluruh SYSTEM PROMPT milik Anda di sini.
-// Tidak perlu diubah.
-PROMPT;
+        
+        PROMPT;
     }
 
     public function send(Request $request): JsonResponse
@@ -31,11 +27,6 @@ PROMPT;
         $userMessage = trim($validated['message']);
         $sessionId = $validated['session_id'] ?? 'anonymous';
 
-        /*
-        |--------------------------------------------------------------------------
-        | Rate Limit
-        |--------------------------------------------------------------------------
-        */
 
         $rateKey = 'cami_rate_'.$sessionId;
 
@@ -48,12 +39,6 @@ PROMPT;
         }
 
         Cache::put($rateKey, $count + 1, now()->addMinute());
-
-        /*
-        |--------------------------------------------------------------------------
-        | Gemini Config
-        |--------------------------------------------------------------------------
-        */
 
         $apiKey = config('services.gemini.api_key');
 
