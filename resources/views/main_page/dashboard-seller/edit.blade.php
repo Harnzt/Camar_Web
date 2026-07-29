@@ -115,6 +115,26 @@
                             </button>
                             <input type="file" id="projectImage" name="image" accept="image/*" style="display:none;">
                         </div>
+
+                        <div class="form-group full">
+                            <label>Dokumen Metodologi</label>
+                            <input type="file" name="methodology_document" accept=".pdf,.jpg,.jpeg,.png,.kml">
+                        </div>
+
+                        <div class="form-group full">
+                            <label>Sertifikat Verifikasi</label>
+                            <input type="file" name="verification_certificate" accept=".pdf,.jpg,.jpeg,.png,.kml">
+                        </div>
+
+                        <div class="form-group full">
+                            <label>Peta Lokasi / Shapefile</label>
+                            <input type="file" name="location_map" accept=".pdf,.jpg,.jpeg,.png,.kml">
+                        </div>
+
+                        <div class="form-group full">
+                            <label>Laporan MRV</label>
+                            <input type="file" name="mrv_report" accept=".pdf,.jpg,.jpeg,.png,.kml">
+                        </div>
                     </div>
                     
                     <button type="submit" class="btn-submit-project" style="background: #124170; margin-top: 1.5rem; cursor: pointer;">

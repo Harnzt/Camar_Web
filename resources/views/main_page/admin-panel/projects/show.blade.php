@@ -4,7 +4,7 @@
 @section('page-title', 'Pemeriksaan Proyek')
 
 @section('content')
-<div class="admin-grid detail">
+<div class="admin-grid">
     <section class="panel">
         <img class="project-review-image" src="{{ $project->image_url }}" alt="{{ $project->name }}">
         <span class="status {{ $project->verification_status }}">{{ str_replace('_', ' ', $project->verification_status) }}</span>
@@ -22,7 +22,33 @@
         <h3>Metodologi</h3><p>{{ $project->methodology ?? '-' }}</p>
     </section>
 
-    <section class="panel sticky-panel">
+    <section class="panel">
+        <div class="panel-heading"><div><span class="panel-kicker">Berkas proyek</span><h2>Dokumen Proyek</h2></div></div>
+        <div class="document-list">
+            @forelse($documents as $document)
+                <article class="document-card">
+                    <div class="document-head">
+                        <div class="list-icon"><i class="fas fa-file-lines"></i></div>
+                        <div class="grow">
+                            <strong>{{ $document->display_type }}</strong>
+                            <span>{{ basename($document->document_path) }}</span>
+                        </div>
+                        <span class="status {{ $document->status }}">{{ str_replace('_', ' ', $document->status) }}</span>
+                    </div>
+                    <a href="{{ route('admin.documents.download', $document) }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-download"></i> Unduh dokumen
+                    </a>
+                    @if($document->notes)
+                        <p class="muted" style="margin: 10px 0 0;">{{ $document->notes }}</p>
+                    @endif
+                </article>
+            @empty
+                <div class="empty-state">Belum ada dokumen proyek yang tersimpan.</div>
+            @endforelse
+        </div>
+    </section>
+
+    <section class="panel">
         <div class="panel-heading"><div><span class="panel-kicker">Keputusan admin</span><h2>Verifikasi Proyek</h2></div></div>
         <form method="POST" action="{{ route('admin.projects.update', $project) }}" class="review-form">
             @csrf @method('PATCH')

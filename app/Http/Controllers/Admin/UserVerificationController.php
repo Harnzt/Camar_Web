@@ -22,8 +22,10 @@ class UserVerificationController extends Controller
         $query = User::query()
             ->whereIn('role', ['buyer', 'seller'])
             ->withCount([
-                'documentVerifications',
-                'documentVerifications as pending_documents_count' => fn ($q) => $q->where('status', 'pending'),
+                'documentVerifications' => fn ($q) => $q->where('document_type', 'not like', 'project_%'),
+                'documentVerifications as pending_documents_count' => fn ($q) => $q
+                    ->where('document_type', 'not like', 'project_%')
+                    ->where('status', 'pending'),
             ]);
 
         if ($request->filled('status')) {
@@ -51,7 +53,11 @@ class UserVerificationController extends Controller
     {
         abort_if($user->isAdministrator(), 404);
 
-        $user->load(['documentVerifications.reviewer']);
+        $user->load([
+            'documentVerifications' => fn ($query) => $query
+                ->where('document_type', 'not like', 'project_%')
+                ->with('reviewer'),
+        ]);
 
         return view('main_page.admin-panel.users.show', compact('user'));
     }
@@ -69,31 +75,27 @@ class UserVerificationController extends Controller
             return back()->withErrors(['reason' => 'Alasan wajib diisi untuk penolakan atau penonaktifan.']);
         }
 
-        if ($validated['status'] === 'verified') {
-            $unapproved = $user->documentVerifications()
-                ->where('status', '!=', 'approved')
-                ->count();
-
-            if ($unapproved > 0) {
-                return back()->withErrors([
-                    'status' => 'Semua dokumen harus disetujui sebelum akun dapat diverifikasi.',
-                ]);
-            }
-        }
-
         $old = $user->only([
             'status', 'verified_by', 'verified_at', 'rejection_reason',
             'suspended_at', 'suspension_reason',
         ]);
 
-        $user->forceFill([
-            'status' => $validated['status'],
-            'verified_by' => $validated['status'] === 'verified' ? auth()->id() : $user->verified_by,
-            'verified_at' => $validated['status'] === 'verified' ? now() : $user->verified_at,
-            'rejection_reason' => $validated['status'] === 'rejected' ? $validated['reason'] : null,
-            'suspended_at' => $validated['status'] === 'suspended' ? now() : null,
-            'suspension_reason' => $validated['status'] === 'suspended' ? $validated['reason'] : null,
-        ])->save();
+        DB::transaction(function () use ($user, $validated) {
+            $user->forceFill([
+                'status' => $validated['status'],
+                'verified_by' => $validated['status'] === 'verified' ? auth()->id() : $user->verified_by,
+                'verified_at' => $validated['status'] === 'verified' ? now() : $user->verified_at,
+                'rejection_reason' => $validated['status'] === 'rejected' ? $validated['reason'] : null,
+                'suspended_at' => $validated['status'] === 'suspended' ? now() : null,
+                'suspension_reason' => $validated['status'] === 'suspended' ? $validated['reason'] : null,
+            ])->save();
+
+            $this->syncAccountDocumentsFromDecision(
+                $user,
+                $validated['status'],
+                $validated['reason'] ?? null
+            );
+        });
 
         $this->audit->log(
             'user.status.updated',
@@ -104,6 +106,34 @@ class UserVerificationController extends Controller
         );
 
         return back()->with('success', 'Status akun berhasil diperbarui.');
+    }
+
+    private function syncAccountDocumentsFromDecision(User $user, string $status, ?string $reason): void
+    {
+        $documentStatus = match ($status) {
+            'verified' => 'approved',
+            'rejected' => 'rejected',
+            'pending' => 'pending',
+            default => null,
+        };
+
+        if (! $documentStatus) {
+            return;
+        }
+
+        $this->accountDocuments($user)->update([
+            'status' => $documentStatus,
+            'reviewed_by' => $status === 'pending' ? null : auth()->id(),
+            'reviewed_at' => $status === 'pending' ? null : now(),
+            'rejection_reason' => $status === 'rejected' ? $reason : null,
+            'notes' => $status === 'rejected' ? $reason : null,
+        ]);
+    }
+
+    private function accountDocuments(User $user)
+    {
+        return $user->documentVerifications()
+            ->where('document_type', 'not like', 'project_%');
     }
 
     public function updateDocument(Request $request, DocumentVerification $document)
@@ -165,6 +195,7 @@ class UserVerificationController extends Controller
         }
 
         $documents = $user->documentVerifications()
+            ->where('document_type', 'not like', 'project_%')
             ->get(['id', 'status', 'reviewed_at', 'rejection_reason', 'notes', 'updated_at']);
 
         if ($documents->isEmpty()) {

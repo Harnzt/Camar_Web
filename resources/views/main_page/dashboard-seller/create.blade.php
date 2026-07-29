@@ -84,7 +84,7 @@
                 </div>
                 <div class="panel-body">
                     <!-- <form id="newProjectForm" action="#" method="POST" enctype="multipart/form-data"> -->
-                        <form action="{{ route('seller.projects.store') }}" method="POST" enctype="multipart/form-data">
+                        <form id="createProjectForm" action="{{ route('seller.projects.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <div class="form-grid">
                             <div class="form-group full">
@@ -195,7 +195,7 @@
                             </div>
                             <label class="doc-upload-btn">
                                 <i class="fas fa-upload"></i> Upload
-                                <input type="file" accept=".pdf" style="display:none;">
+                                <input type="file" name="methodology_document" form="createProjectForm" accept=".pdf,.jpg,.jpeg,.png,.kml" style="display:none;">
                             </label>
                         </div>
 
@@ -209,7 +209,7 @@
                             </div>
                             <label class="doc-upload-btn">
                                 <i class="fas fa-upload"></i> Upload
-                                <input type="file" accept=".pdf,.jpg,.png" style="display:none;">
+                                <input type="file" name="verification_certificate" form="createProjectForm" accept=".pdf,.jpg,.jpeg,.png,.kml" style="display:none;">
                             </label>
                         </div>
 
@@ -223,7 +223,7 @@
                             </div>
                             <label class="doc-upload-btn">
                                 <i class="fas fa-upload"></i> Upload
-                                <input type="file" accept=".pdf,.kml,.jpg,.png" style="display:none;">
+                                <input type="file" name="location_map" form="createProjectForm" accept=".pdf,.jpg,.jpeg,.png,.kml" style="display:none;">
                             </label>
                         </div>
 
@@ -237,7 +237,7 @@
                             </div>
                             <label class="doc-upload-btn">
                                 <i class="fas fa-upload"></i> Upload
-                                <input type="file" accept=".pdf" style="display:none;">
+                                <input type="file" name="mrv_report" form="createProjectForm" accept=".pdf,.jpg,.jpeg,.png,.kml" style="display:none;">
                             </label>
                         </div>
 

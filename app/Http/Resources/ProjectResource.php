@@ -8,6 +8,13 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProjectResource extends JsonResource
 {
+    private const PROJECT_DOCUMENT_FIELDS = [
+        'methodology_document',
+        'verification_certificate',
+        'location_map',
+        'mrv_report',
+    ];
+
     /**
      * @return array<string, mixed>
      */
@@ -58,7 +65,7 @@ class ProjectResource extends JsonResource
 
         return DocumentVerification::query()
             ->where('user_id', $this->seller_id)
-            ->where('document_type', 'like', "project_{$this->id}_%")
+            ->whereIn('document_type', $this->projectDocumentTypes())
             ->get()
             ->mapWithKeys(function (DocumentVerification $document) {
                 $type = preg_replace("/^project_{$this->id}_/", '', $document->document_type);
@@ -72,6 +79,13 @@ class ProjectResource extends JsonResource
                     ],
                 ];
             })
+            ->all();
+    }
+
+    private function projectDocumentTypes(): array
+    {
+        return collect(self::PROJECT_DOCUMENT_FIELDS)
+            ->map(fn (string $field) => "project_{$this->id}_{$field}")
             ->all();
     }
 }

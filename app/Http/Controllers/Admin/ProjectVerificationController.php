@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\DocumentVerification;
 use App\Models\Project;
 use App\Services\AdminAuditService;
 use Illuminate\Http\Request;
@@ -10,6 +11,13 @@ use Illuminate\Validation\Rule;
 
 class ProjectVerificationController extends Controller
 {
+    private const PROJECT_DOCUMENT_LABELS = [
+        'methodology_document' => 'Dokumen Metodologi',
+        'verification_certificate' => 'Sertifikat Verifikasi',
+        'location_map' => 'Peta Lokasi',
+        'mrv_report' => 'Laporan MRV',
+    ];
+
     public function __construct(private readonly AdminAuditService $audit)
     {
     }
@@ -39,7 +47,27 @@ class ProjectVerificationController extends Controller
     {
         $project->load(['seller', 'reviewer']);
 
-        return view('main_page.admin-panel.projects.show', compact('project'));
+        $documents = DocumentVerification::query()
+            ->with('reviewer')
+            ->whereIn('document_type', $this->projectDocumentTypes($project->id))
+            ->latest()
+            ->get()
+            ->map(function (DocumentVerification $document) use ($project) {
+                $field = preg_replace("/^project_{$project->id}_/", '', $document->document_type);
+                $document->display_type = self::PROJECT_DOCUMENT_LABELS[$field]
+                    ?? strtoupper(str_replace('_', ' ', $field));
+
+                return $document;
+            });
+
+        return view('main_page.admin-panel.projects.show', compact('project', 'documents'));
+    }
+
+    private function projectDocumentTypes(int $projectId): array
+    {
+        return collect(array_keys(self::PROJECT_DOCUMENT_LABELS))
+            ->map(fn (string $field) => "project_{$projectId}_{$field}")
+            ->all();
     }
 
     public function update(Request $request, Project $project)

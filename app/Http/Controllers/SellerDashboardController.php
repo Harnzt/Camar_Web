@@ -2,14 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DocumentVerification;
+
 use App\Models\Project;
 use App\Models\Order; // 🔥 MENGGUNAKAN ORDER SEBAGAI PENGGANTI TRANSACTION
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class SellerDashboardController extends Controller
 {
+    private const PROJECT_DOCUMENT_FIELDS = [
+        'methodology_document' => 'Dokumen Metodologi',
+        'verification_certificate' => 'Sertifikat Verifikasi',
+        'location_map' => 'Peta Lokasi',
+        'mrv_report' => 'Laporan MRV',
+    ];
+
     public function index()
     {
         $user = Auth::user();
@@ -144,6 +155,11 @@ class SellerDashboardController extends Controller
             'price_per_ton'   => 'required|numeric|min:0',
             'stock_available' => 'required|numeric|min:0',
             'description'     => 'required',
+            'image'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'methodology_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,kml|max:10240',
+            'verification_certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png,kml|max:10240',
+            'location_map' => 'nullable|file|mimes:pdf,jpg,jpeg,png,kml|max:10240',
+            'mrv_report' => 'nullable|file|mimes:pdf,jpg,jpeg,png,kml|max:10240',
         ]);
 
         $imageName = null;
@@ -152,7 +168,7 @@ class SellerDashboardController extends Controller
             $request->image->move(public_path('images'), $imageName);
         }
 
-        Project::create([
+        $project = Project::create([
             'seller_id'         => Auth::id(),
             'company_name'      => Auth::user()->company_name ?? 'Mitra CAMAR', 
             'name'              => $request->name,
@@ -164,13 +180,15 @@ class SellerDashboardController extends Controller
             'co2_per_year'      => $request->co2_per_year,
             'area_ha'           => $request->area_ha,
             'families_impacted' => $request->families_impacted,
-            'duration_months'   => $request->duration_months,
+            'duration_months'   => $request->duration_months ?: 12,
             'description'       => $request->description,
             'methodology'       => $request->methodology,
             'image'             => $imageName,
             'verification_status' => 'pending',
             'submitted_at'      => now(),
         ]);
+
+        $this->storeProjectDocuments($request, $project);
 
         return redirect()->route('seller.dashboard')->with('success', 'Proyek berhasil diajukan dan menunggu verifikasi admin.');
     }
@@ -199,6 +217,11 @@ class SellerDashboardController extends Controller
             'price_per_ton'   => 'required|numeric|min:0',
             'stock_available' => 'required|numeric|min:0',
             'description'     => 'required',
+            'image'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'methodology_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,kml|max:10240',
+            'verification_certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png,kml|max:10240',
+            'location_map' => 'nullable|file|mimes:pdf,jpg,jpeg,png,kml|max:10240',
+            'mrv_report' => 'nullable|file|mimes:pdf,jpg,jpeg,png,kml|max:10240',
         ]);
 
         $project = Project::where('seller_id', Auth::id())->findOrFail($id);
@@ -223,7 +246,7 @@ class SellerDashboardController extends Controller
             'co2_per_year'      => $request->co2_per_year,
             'area_ha'           => $request->area_ha,
             'families_impacted' => $request->families_impacted,
-            'duration_months'   => $request->duration_months,
+            'duration_months'   => $request->duration_months ?: 12,
             'description'       => $request->description,
             'methodology'       => $request->methodology,
             'verification_status' => 'pending',
@@ -234,7 +257,50 @@ class SellerDashboardController extends Controller
             'submitted_at'      => now(),
         ]);
 
+        $this->storeProjectDocuments($request, $project->fresh());
+
         return redirect()->route('seller.dashboard')->with('success', 'Data proyek diperbarui dan diajukan kembali untuk verifikasi.');
+    }
+
+    private function storeProjectDocuments(Request $request, Project $project): void
+    {
+        foreach (self::PROJECT_DOCUMENT_FIELDS as $field => $label) {
+            if (!$request->hasFile($field)) {
+                continue;
+            }
+
+            $path = $this->storePrivateProjectDocument(
+                $request->file($field),
+                $project,
+                $field
+            );
+
+            DocumentVerification::updateOrCreate(
+                [
+                    'user_id' => $project->seller_id,
+                    'document_type' => "project_{$project->id}_{$field}",
+                ],
+                [
+                    'document_path' => $path,
+                    'status' => 'pending',
+                    'reviewed_by' => null,
+                    'reviewed_at' => null,
+                    'rejection_reason' => null,
+                    'notes' => "{$label} untuk proyek {$project->name}.",
+                ]
+            );
+        }
+    }
+
+    private function storePrivateProjectDocument(UploadedFile $file, Project $project, string $field): string
+    {
+        $filename = $field.'_'.now()->format('YmdHis').'_'.Str::random(8).'.'.$file->getClientOriginalExtension();
+
+        return $file->storeAs(
+            "project-documents/{$project->seller_id}/{$project->id}",
+            $filename,
+            'private'
+        );
     }
 
     public function transactions(Request $request)

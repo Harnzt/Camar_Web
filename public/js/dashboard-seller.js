@@ -174,8 +174,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 const label = this.closest('.doc-upload-btn');
                 const name  = this.files[0].name;
                 const short = name.length > 18 ? name.substring(0, 15) + '...' : name;
+                let text = label.querySelector('[data-upload-text]');
 
-                label.innerHTML = `<i class="fas fa-check"></i> ${short}`;
+                if (!text) {
+                    label.childNodes.forEach(node => {
+                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                            node.remove();
+                        }
+                    });
+
+                    text = document.createElement('span');
+                    text.dataset.uploadText = 'true';
+                    label.insertBefore(text, this);
+                }
+
+                const icon = label.querySelector('i');
+                if (icon) icon.className = 'fas fa-check';
+                text.textContent = short;
                 label.style.background   = '#67C090';
                 label.style.color        = 'white';
                 label.style.borderColor  = '#67C090';

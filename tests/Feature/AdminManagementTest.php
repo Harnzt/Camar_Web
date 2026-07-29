@@ -2,10 +2,13 @@
 
 use App\Models\AdminActivityLog;
 use App\Models\DocumentVerification;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\AdminLoginLog;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -99,6 +102,138 @@ test('account status follows rejected document review', function () {
     expect($document->fresh()->status)->toBe('rejected')
         ->and($seller->status)->toBe('rejected')
         ->and($seller->rejection_reason)->toBe('Nomor dokumen tidak sesuai.');
+});
+
+test('auditor can decide account verification from the admin decision panel', function () {
+    $auditor = createAdministrativeUser('auditor');
+    $buyer = User::create([
+        'name' => 'Buyer Decision',
+        'email' => 'buyer-decision@example.test',
+        'password' => 'password',
+        'role' => 'buyer',
+        'account_category' => 'personal',
+        'status' => 'pending',
+    ]);
+    $document = DocumentVerification::create([
+        'user_id' => $buyer->id,
+        'document_type' => 'npwp',
+        'document_path' => 'documents/npwp.pdf',
+        'status' => 'pending',
+    ]);
+
+    $this->actingAs($auditor)
+        ->patch(route('admin.users.status', $buyer), [
+            'status' => 'verified',
+            'reason' => 'Data dan dokumen sesuai.',
+        ])
+        ->assertRedirect();
+
+    $buyer->refresh();
+    $document->refresh();
+
+    expect($buyer->status)->toBe('verified')
+        ->and($buyer->verified_by)->toBe($auditor->id)
+        ->and($document->status)->toBe('approved')
+        ->and($document->reviewed_by)->toBe($auditor->id);
+});
+
+test('user verification detail shows documents as read only and decision form separately', function () {
+    $auditor = createAdministrativeUser('auditor');
+    $buyer = User::create([
+        'name' => 'Buyer Readonly',
+        'email' => 'buyer-readonly@example.test',
+        'password' => 'password',
+        'role' => 'buyer',
+        'account_category' => 'personal',
+        'status' => 'pending',
+    ]);
+    DocumentVerification::create([
+        'user_id' => $buyer->id,
+        'document_type' => 'npwp',
+        'document_path' => 'documents/npwp.pdf',
+        'status' => 'pending',
+    ]);
+
+    $this->actingAs($auditor)
+        ->get(route('admin.users.show', $buyer))
+        ->assertOk()
+        ->assertSee('Informasi Pengguna')
+        ->assertSee('Dokumen Pengguna')
+        ->assertSee('Verifikasi Akun')
+        ->assertSee('Unduh dokumen')
+        ->assertDontSee('Catatan pemeriksaan')
+        ->assertDontSee('inline-review');
+});
+
+test('seller project submission stores uploaded project documents', function () {
+    Storage::fake('private');
+
+    $seller = User::create([
+        'name' => 'Seller Project',
+        'email' => 'seller-project@example.test',
+        'password' => 'password',
+        'role' => 'seller',
+        'account_category' => 'company',
+        'status' => 'verified',
+    ]);
+
+    $this->actingAs($seller)
+        ->post(route('seller.projects.store'), [
+            'name' => 'Mangrove Audit Project',
+            'category' => 'mangrove',
+            'location' => 'Jakarta',
+            'price_per_ton' => 125000,
+            'stock_available' => 100,
+            'description' => 'Proyek rehabilitasi mangrove.',
+            'methodology_document' => UploadedFile::fake()->create('methodology.pdf', 120, 'application/pdf'),
+        ])
+        ->assertRedirect(route('seller.dashboard'));
+
+    $project = Project::where('seller_id', $seller->id)->first();
+    $document = DocumentVerification::where('document_type', "project_{$project->id}_methodology_document")->first();
+
+    expect($document)->not->toBeNull()
+        ->and($document->status)->toBe('pending');
+
+    Storage::disk('private')->assertExists($document->document_path);
+});
+
+test('auditor can see project documents on project review page', function () {
+    $auditor = createAdministrativeUser('auditor');
+    $seller = User::create([
+        'name' => 'Seller With Documents',
+        'email' => 'seller-with-documents@example.test',
+        'password' => 'password',
+        'role' => 'seller',
+        'account_category' => 'company',
+        'status' => 'verified',
+    ]);
+    $project = Project::create([
+        'seller_id' => $seller->id,
+        'company_name' => 'Mitra CAMAR',
+        'name' => 'Solar Audit Project',
+        'category' => 'solar',
+        'location' => 'Bandung',
+        'price_per_ton' => 150000,
+        'stock_available' => 80,
+        'description' => 'Proyek panel surya.',
+        'verification_status' => 'pending',
+        'submitted_at' => now(),
+    ]);
+
+    DocumentVerification::create([
+        'user_id' => $seller->id,
+        'document_type' => "project_{$project->id}_verification_certificate",
+        'document_path' => "project-documents/{$seller->id}/{$project->id}/certificate.pdf",
+        'status' => 'pending',
+    ]);
+
+    $this->actingAs($auditor)
+        ->get(route('admin.projects.show', $project))
+        ->assertOk()
+        ->assertSee('Dokumen Proyek')
+        ->assertSee('Sertifikat Verifikasi')
+        ->assertSee('certificate.pdf');
 });
 
 test('regular admin cannot manage administrator accounts', function () {
