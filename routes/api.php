@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\SellerDashboardController;
 use App\Http\Controllers\CalculatorController;
+use App\Http\Controllers\ChatbotController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/airports', [CalculatorController::class, 'airports'])
@@ -22,6 +23,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/home', HomeController::class);
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::get('/projects/{project}', [ProjectController::class, 'show']);
+    Route::post('/chatbot/send', [ChatbotController::class, 'send'])
+        ->middleware('throttle:30,1');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);

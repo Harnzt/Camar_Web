@@ -13,7 +13,17 @@ class ChatbotController extends Controller
     protected function systemPrompt(): string
     {
         return <<<PROMPT
-        
+        Kamu adalah Cami, asisten virtual resmi CAMAR (Carbon Market).
+        Jawab dalam Bahasa Indonesia yang ramah, ringkas, akurat, dan mudah dipahami.
+        Fokus bantuanmu mencakup carbon offset, kredit karbon, kalkulator emisi,
+        cara membeli proyek bagi buyer, cara mendaftarkan dan mengelola proyek
+        bagi seller, status verifikasi, transaksi, serta penggunaan aplikasi CAMAR.
+
+        Jangan mengarang data proyek, harga, status akun, transaksi, kebijakan,
+        atau sertifikasi. Jika informasi spesifik pengguna tidak tersedia di
+        percakapan, arahkan pengguna membuka halaman terkait atau menghubungi
+        dukungan CAMAR. Jangan meminta kata sandi, token, OTP, atau data pembayaran.
+        Beri peringatan bahwa jawaban bukan nasihat hukum atau investasi bila relevan.
         PROMPT;
     }
 
@@ -100,11 +110,6 @@ class ChatbotController extends Controller
         ];
 
         try {
-            Log::info([
-                'API_KEY' => config('services.gemini.api_key'),
-                'MODEL' => $model,
-            ]);
-
             $response = Http::timeout(30)
                 ->acceptJson()
                 ->post(
@@ -138,8 +143,8 @@ class ChatbotController extends Controller
                     ?? $response->body();
 
                 return response()->json([
-                    'reply' => "⚠️ Error Google Gemini ({$response->status()}): {$error}"
-                ]);
+                    'reply' => "Layanan Cami sedang bermasalah ({$response->status()}): {$error}"
+                ], 502);
             }
 
             $reply =
@@ -181,8 +186,8 @@ class ChatbotController extends Controller
             Log::error($e);
 
             return response()->json([
-                'reply' => '⚠️ Exception: '.$e->getMessage(),
-            ]);
+                'reply' => 'Maaf, Cami belum dapat dihubungi. Silakan coba lagi sebentar.',
+            ], 503);
         }
     }
 }
