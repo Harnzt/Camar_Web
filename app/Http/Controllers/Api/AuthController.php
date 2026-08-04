@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -17,7 +18,12 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'role' => ['required', 'in:buyer,seller'],
-            'account_category' => ['required', 'in:company,personal'],
+            'account_category' => [
+                'required',
+                Rule::in($request->input('role') === 'seller'
+                    ? ['company']
+                    : ['company', 'personal']),
+            ],
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'confirm_password' => ['required', 'same:password'],
@@ -36,6 +42,8 @@ class AuthController extends Controller
             'documents.iso' => ['nullable', 'string', 'max:255'],
             'documents.gold_standard' => ['nullable', 'string', 'max:255'],
             'documents.vcs' => ['nullable', 'string', 'max:255'],
+        ], [
+            'account_category.in' => 'Seller hanya dapat mendaftar sebagai perusahaan.',
         ]);
 
         if ($validated['account_category'] === 'personal') {

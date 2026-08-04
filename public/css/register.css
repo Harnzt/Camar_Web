@@ -269,6 +269,10 @@
     color: inherit;
 }
 
+.account-card.seller-company-card {
+    grid-column: 1 / -1;
+}
+
 .account-card:hover {
     border-color: #67C090;
     transform: translateY(-5px);

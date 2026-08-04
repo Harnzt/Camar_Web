@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use App\Http\Controllers\CartController;
 use App\Models\DocumentVerification;
@@ -28,7 +29,12 @@ class AuthController extends Controller
         // ----------------------------------------------------------
         $commonRules = [
             'role'             => 'required|in:buyer,seller',
-            'account_category' => 'required|in:company,personal',
+            'account_category' => [
+                'required',
+                Rule::in($request->input('role') === 'seller'
+                    ? ['company']
+                    : ['company', 'personal']),
+            ],
             'password'         => ['required', 'min:8'],
             'confirm_password' => 'required|same:password',
             'address'          => 'required|string|max:500',
@@ -79,7 +85,10 @@ class AuthController extends Controller
         }
 
         // Gabungkan semua rules dan validasi
-        $request->validate(array_merge($commonRules, $categoryRules, $sellerRules));
+        $request->validate(
+            array_merge($commonRules, $categoryRules, $sellerRules),
+            ['account_category.in' => 'Seller hanya dapat mendaftar sebagai perusahaan.'],
+        );
 
         // Validasi seller: minimal 1 sertifikat
         if ($role === 'seller') {

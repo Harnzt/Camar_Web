@@ -5,7 +5,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/register.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"> -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 @endpush
 
 @section('content')
@@ -14,7 +14,7 @@
     <div class="register-container">
         <!-- Logo -->
         <div class="register-logo">
-            <img src="{{ asset('images/logo-camar.svg') }}" alt="CAMAR">
+            <img src="{{ asset('images/logo.png') }}" alt="CAMAR">
             <h1>CAMAR</h1>
             <p>Daftar Akun Baru</p>
         </div>

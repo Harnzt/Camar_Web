@@ -33,6 +33,22 @@ function selectRole(type, element) {
     // Show/hide seller docs section
     const sellerDocs = document.getElementById('sellerDocs');
     sellerDocs.style.display = (type === 'seller') ? 'block' : 'none';
+
+    // Seller hanya dapat mendaftar sebagai perusahaan.
+    const companyOption = document.querySelector('[data-category-option="company"]');
+    const personalOption = document.querySelector('[data-category-option="personal"]');
+
+    if (personalOption) {
+        personalOption.hidden = (type === 'seller');
+    }
+
+    if (companyOption) {
+        companyOption.classList.toggle('seller-company-card', type === 'seller');
+    }
+
+    if (type === 'seller' && companyOption) {
+        selectCategory('company', companyOption);
+    }
 }
 
 // ====================================
