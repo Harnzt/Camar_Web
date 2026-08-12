@@ -80,49 +80,124 @@ class OrderController extends Controller
         ], 201);
     }
 
-    public function confirm(Request $request): JsonResponse
+    public function charge(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'order_ids' => ['required', 'array', 'min:1'],
             'order_ids.*' => ['integer'],
-            'payment_method' => ['required', 'string', 'max:50'],
+            'payment_method' => ['required', 'string', 'in:va_bca,va_bni,va_bri,va_mandiri,qris,gopay'],
         ]);
 
-        $orders = DB::transaction(function () use ($validated, $request) {
-            $orders = Order::query()
-                ->with('project')
-                ->where('user_id', $request->user()->id)
-                ->whereIn('id', $validated['order_ids'])
-                ->lockForUpdate()
-                ->get();
+        $orders = Order::query()
+            ->with('project')
+            ->where('user_id', $request->user()->id)
+            ->whereIn('id', $validated['order_ids'])
+            ->where('status', 'pending')
+            ->get();
 
-            abort_if($orders->count() !== count($validated['order_ids']), 404, 'Sebagian pesanan tidak ditemukan.');
+        if ($orders->isEmpty()) {
+            return response()->json(['message' => 'Pesanan tidak ditemukan atau sudah dibayar.'], 404);
+        }
 
-            foreach ($orders as $order) {
-                if (! in_array($order->status, ['paid', 'verified', 'completed'], true)) {
-                    if ($order->project && $order->project->stock_available !== null) {
-                        abort_if(
-                            $order->quantity > $order->project->stock_available,
-                            422,
-                            "Stok proyek \"{$order->project->name}\" tidak mencukupi.",
-                        );
+        $grossAmount = (int) $orders->sum('total_price');
+        $orderId = $orders->first()->order_number;
 
-                        $order->project->decrement('stock_available', $order->quantity);
-                    }
+        $itemDetails = [];
+        foreach ($orders as $order) {
+            $itemDetails[] = [
+                'id'       => 'project-' . $order->id,
+                'price'    => (int) $order->project->price_per_ton,
+                'quantity' => $order->quantity,
+                'name'     => substr($order->project->name ?? 'Proyek', 0, 45),
+            ];
+            $itemDetails[] = [
+                'id'       => 'tax-' . $order->id,
+                'price'    => (int) $order->tax,
+                'quantity' => 1,
+                'name'     => 'PPN 11% - ' . substr($order->project->name ?? 'Proyek', 0, 30),
+            ];
+        }
 
-                    $order->update([
-                        'status' => 'paid',
-                        'payment_method' => $validated['payment_method'],
-                    ]);
+        $serverKey = config('midtrans.server_key');
+        $isProduction = config('midtrans.is_production', false);
+        $baseUrl = $isProduction ? 'https://api.midtrans.com/v2/charge' : 'https://api.sandbox.midtrans.com/v2/charge';
+
+        $payload = [
+            'transaction_details' => [
+                'order_id'     => $orderId,
+                'gross_amount' => $grossAmount,
+            ],
+            'item_details' => $itemDetails,
+            'customer_details' => [
+                'first_name' => $request->user()->name,
+                'email'      => $request->user()->email,
+                'phone'      => $request->user()->phone ?? '',
+            ],
+        ];
+
+        $paymentMethod = $validated['payment_method'];
+
+        if (in_array($paymentMethod, ['va_bca', 'va_bni', 'va_bri'])) {
+            $payload['payment_type'] = 'bank_transfer';
+            $payload['bank_transfer'] = [
+                'bank' => str_replace('va_', '', $paymentMethod),
+            ];
+        } elseif ($paymentMethod === 'va_mandiri') {
+            $payload['payment_type'] = 'echannel';
+            $payload['echannel'] = [
+                'bill_info1' => 'Payment For:',
+                'bill_info2' => 'Camar Carbon',
+            ];
+        } elseif ($paymentMethod === 'qris') {
+            $payload['payment_type'] = 'qris';
+        } elseif ($paymentMethod === 'gopay') {
+            $payload['payment_type'] = 'gopay';
+        }
+
+        $response = \Illuminate\Support\Facades\Http::timeout(30)
+            ->withBasicAuth($serverKey, '')
+            ->post($baseUrl, $payload);
+
+        if (!$response->successful()) {
+            return response()->json([
+                'message' => 'Gagal menghubungi server pembayaran Midtrans.',
+                'error' => $response->body()
+            ], 500);
+        }
+
+        $resData = $response->json();
+
+        // Update local orders with chosen payment method
+        foreach ($orders as $order) {
+            $order->update(['payment_method' => $paymentMethod]);
+        }
+
+        // Return unified data to mobile app
+        $responseData = [
+            'status_code' => $resData['status_code'] ?? '200',
+            'order_id' => $resData['order_id'] ?? $orderId,
+            'gross_amount' => $resData['gross_amount'] ?? $grossAmount,
+            'payment_type' => $resData['payment_type'] ?? '',
+        ];
+
+        if (isset($resData['va_numbers']) && count($resData['va_numbers']) > 0) {
+            $responseData['va_number'] = $resData['va_numbers'][0]['va_number'];
+            $responseData['bank'] = $resData['va_numbers'][0]['bank'];
+        } elseif (isset($resData['biller_code']) && isset($resData['bill_key'])) {
+            $responseData['va_number'] = $resData['bill_key']; // Bill Key functions as VA for Mandiri
+            $responseData['biller_code'] = $resData['biller_code'];
+            $responseData['bank'] = 'mandiri';
+        } elseif (isset($resData['actions'])) {
+            foreach ($resData['actions'] as $action) {
+                if ($action['name'] === 'generate-qr-code') {
+                    $responseData['qr_code_url'] = $action['url'];
                 }
             }
-
-            return $orders->fresh(['project']);
-        });
+        }
 
         return response()->json([
-            'message' => 'Pembayaran berhasil dikonfirmasi.',
-            'orders' => $orders->map(fn (Order $order) => $this->orderData($order))->values(),
+            'message' => 'Charge berhasil',
+            'payment_info' => $responseData,
         ]);
     }
 

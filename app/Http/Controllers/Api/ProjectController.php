@@ -49,4 +49,19 @@ class ProjectController extends Controller
             ProjectResource::make($project)->resolve(),
         );
     }
+
+    public function recommendations(Request $request, \App\Services\ProjectRecommendationService $recommendationService): JsonResponse
+    {
+        $user = $request->user();
+        $emission = \App\Models\EmissionCalculation::query()
+            ->where('user_id', $user->id)
+            ->latest()
+            ->first();
+
+        $recommendations = $recommendationService->recommend($user, $emission, 3);
+
+        return response()->json(
+            ProjectResource::collection($recommendations)->resolve()
+        );
+    }
 }

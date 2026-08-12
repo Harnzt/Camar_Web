@@ -33,8 +33,9 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:buyer')->group(function () {
             Route::get('/buyer/dashboard', BuyerDashboardController::class);
             Route::get('/buyer/transactions', [OrderController::class, 'buyerTransactions']);
+            Route::get('/buyer/recommendations', [ProjectController::class, 'recommendations']);
             Route::post('/orders', [OrderController::class, 'store']);
-            Route::post('/orders/confirm', [OrderController::class, 'confirm']);
+            Route::post('/orders/charge', [OrderController::class, 'charge']);
             Route::post('/calculations', [CalculatorController::class, 'store']);
             Route::get('/calculations/latest', [EmissionCalculationController::class, 'latest']);
             Route::delete('/calculations', [CalculatorController::class, 'clear']);
