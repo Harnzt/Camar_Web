@@ -188,8 +188,13 @@ class AuthController extends Controller
         }
 
         // ----------------------------------------------------------
-        // 7. LOGIN & REDIRECT
+        // 7. BROADCAST & REDIRECT
         // ----------------------------------------------------------
+        \App\Events\DashboardUpdated::dispatch([
+            'type' => 'new_user',
+            'message' => 'Pengguna baru mendaftar: ' . $user->name
+        ]);
+
         return redirect()->route('login')->with('success', 'Akun berhasil dibuat! Akun Anda sedang menunggu verifikasi admin dalam 1-2 hari kerja.');
     }
 

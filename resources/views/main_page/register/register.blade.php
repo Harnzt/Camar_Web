@@ -457,9 +457,9 @@
                         <input type="checkbox" id="termsCheck" name="terms" required>
                         <span>
                             Saya menyetujui
-                            <a href="#" target="_blank">Syarat &amp; Ketentuan</a>
+                            <a href="#">Syarat &amp; Ketentuan</a>
                             dan
-                            <a href="#" target="_blank">Kebijakan Privasi</a>
+                            <a href="#">Kebijakan Privasi</a>
                             CAMAR
                         </span>
                     </label>
@@ -497,13 +497,23 @@
 </div>
 
 @if($errors->any())
-    <div style="background:#dc3545;color:white;padding:1rem;border-radius:12px;margin-bottom:1rem;">
-        <ul style="margin:0;padding-left:1.2rem;">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let errorList = `<ul style="text-align: left; margin: 0; padding-left: 1.2rem;">`;
             @foreach($errors->all() as $error)
-                <li>{{ $error }}</li>
+                errorList += `<li>{{ $error }}</li>`;
             @endforeach
-        </ul>
-    </div>
+            errorList += `</ul>`;
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Validasi Gagal',
+                html: errorList,
+                confirmButtonColor: '#67C090'
+            });
+        });
+    </script>
 @endif
 
 @endsection

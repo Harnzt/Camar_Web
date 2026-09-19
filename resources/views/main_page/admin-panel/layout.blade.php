@@ -92,5 +92,61 @@
         </div>
     </main>
 </div>
+    
+    <!-- Realtime WebSockets (Laravel Echo + Reverb) -->
+    <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.Pusher = Pusher;
+            window.Echo = new Echo({
+                broadcaster: 'reverb',
+                key: '{{ config('broadcasting.connections.reverb.key') }}',
+                wsHost: window.location.hostname,
+                wsPort: {{ config('broadcasting.connections.reverb.options.port', 8080) }},
+                wssPort: {{ config('broadcasting.connections.reverb.options.port', 8080) }},
+                forceTLS: (window.location.protocol === 'https:'),
+                enabledTransports: ['ws', 'wss'],
+            });
+
+            // Simple Custom Toast Function
+            function showToast(message) {
+                const toast = document.createElement('div');
+                toast.innerText = message;
+                toast.style.position = 'fixed';
+                toast.style.bottom = '20px';
+                toast.style.right = '20px';
+                toast.style.backgroundColor = '#124170';
+                toast.style.color = '#fff';
+                toast.style.padding = '12px 24px';
+                toast.style.borderRadius = '8px';
+                toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                toast.style.zIndex = '9999';
+                toast.style.fontFamily = 'Manrope, sans-serif';
+                toast.style.transition = 'opacity 0.3s ease';
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+            }
+
+            window.Echo.channel('admin-dashboard')
+                .listen('.DashboardUpdated', (e) => {
+                    console.log('Realtime event received:', e);
+                    
+                    // Menampilkan toast UI non-blocking
+                    showToast(e.data.message);
+
+                    // Auto-increment angka tanpa refresh
+                    if (e.data.type === 'new_user') {
+                        let el = document.getElementById('stat-pending-users');
+                        if (el) el.innerText = parseInt(el.innerText) + 1;
+                    } 
+                    // Tambahkan logic auto-increment lain di sini jika ada elemen transaksinya
+                });
+        });
+    </script>
 </body>
 </html>

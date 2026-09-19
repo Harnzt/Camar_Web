@@ -22,7 +22,7 @@ use App\Http\Controllers\ChatbotController;
 // 1. AUTHENTICATION ROUTES
 // ========================================
 
-Route::middleware('guest')-> group(function(){
+Route::middleware(['guest', 'throttle:10,1'])->group(function(){
     Route::get('/register',     [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register',    [AuthController::class, 'register'])->name('register.process');
     Route::get('/login',        [AuthController::class, 'showLogin'])->name('login');

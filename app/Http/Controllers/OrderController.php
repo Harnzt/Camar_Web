@@ -303,19 +303,14 @@ class OrderController extends Controller
 
             DB::beginTransaction();
             try {
+                // Gunakan status 'pending' agar pesanan tidak langsung dianggap lunas
+                // Hanya update payment_method, jangan kurangi stok di sini
                 Order::whereIn('id', $ids)
                     ->where('user_id', Auth::id())
                     ->update([
                         'payment_method' => $request->payment_method,
-                        'status'         => 'paid'
+                        'status'         => 'pending' 
                     ]);
-
-                foreach ($ids as $orderId) {
-                    $order = Order::find($orderId);
-                    if ($order && $order->project) {
-                        $order->project->decrement('stock_available', $order->quantity);
-                    }
-                }
 
                 DB::commit();
                 session()->forget('pending_transaction_ids');

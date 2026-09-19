@@ -72,6 +72,12 @@ class OrderController extends Controller
                 ->get();
         });
 
+        \App\Events\DashboardUpdated::dispatch([
+            'type' => 'new_order',
+            'message' => 'Pesanan baru dibuat oleh: ' . $user->name,
+            'amount' => (float) $orders->sum('total_price')
+        ]);
+
         return response()->json([
             'message' => 'Pesanan berhasil dibuat.',
             'orders' => $orders->map(fn (Order $order) => $this->orderData($order))->values(),

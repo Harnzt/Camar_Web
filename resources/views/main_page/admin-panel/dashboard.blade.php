@@ -15,16 +15,16 @@
 <div class="stat-grid">
     @if($canVerifyUsers)
         <a class="stat-card" href="{{ route('admin.users.index', ['status' => 'pending']) }}">
-            <i class="fas fa-user-clock orange"></i><div><span>Akun Menunggu</span><strong>{{ $stats['pending_users'] }}</strong></div>
+            <i class="fas fa-user-clock orange"></i><div><span>Akun Menunggu</span><strong id="stat-pending-users">{{ $stats['pending_users'] }}</strong></div>
         </a>
         <a class="stat-card" href="{{ route('admin.users.index') }}">
-            <i class="fas fa-file-circle-check blue"></i><div><span>Dokumen Menunggu</span><strong>{{ $stats['pending_documents'] }}</strong></div>
+            <i class="fas fa-file-circle-check blue"></i><div><span>Dokumen Menunggu</span><strong id="stat-pending-documents">{{ $stats['pending_documents'] }}</strong></div>
         </a>
     @endif
 
     @if($canVerifyProjects)
         <a class="stat-card" href="{{ route('admin.projects.index', ['status' => 'pending']) }}">
-            <i class="fas fa-seedling green"></i><div><span>Proyek Menunggu</span><strong>{{ $stats['pending_projects'] }}</strong></div>
+            <i class="fas fa-seedling green"></i><div><span>Proyek Menunggu</span><strong id="stat-pending-projects">{{ $stats['pending_projects'] }}</strong></div>
         </a>
     @endif
 
