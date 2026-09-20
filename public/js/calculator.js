@@ -352,14 +352,17 @@ function switchTab(prefix, step, total) {
 
 function switchSubTab(group, key) {
     // Hide all panes in group
-    document.querySelectorAll(`[id^="${group}-"]`).forEach(p => {
+    document.querySelectorAll(`.sub-tab-pane[id^="${group}-"]`).forEach(p => {
         const isTarget = p.id === `${group}-${key}`;
         p.classList.toggle('active', isTarget);
         p.hidden = !isTarget;
     });
     // Activate
     const target = document.getElementById(`${group}-${key}`);
-    if (target) target.classList.add('active');
+    if (target) {
+        target.classList.add('active');
+        target.hidden = false;
+    }
 
     document.querySelectorAll(`.sub-tab-btn[data-sub-tab-group="${group}"]`).forEach((button) => {
         const isTarget = button.dataset.subTabKey === key;
@@ -482,7 +485,7 @@ function enhanceCalculatorAccessibility() {
             const panel = document.getElementById(panelId);
             button.type = 'button';
             button.setAttribute('role', 'tab');
-            button.id ||= `${panelId}-tab`;
+            button.id ||= `tab-${panelId}`;
             button.setAttribute('aria-controls', panelId);
             button.setAttribute('aria-selected', button.classList.contains('active') ? 'true' : 'false');
             button.tabIndex = button.classList.contains('active') ? 0 : -1;
