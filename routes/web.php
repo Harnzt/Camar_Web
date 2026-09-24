@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
@@ -68,7 +69,16 @@ Route::post('/watchlist/toggle', [ProjectController::class, 'toggleWatchlist'])-
 Route::middleware('auth')->group(function () {
     // DashboardsSeller
     Route::get('/seller/dashboard',       [SellerDashboardController::class, 'index'])->middleware('role:seller')->name('seller.dashboard');
-    Route::get('/dashboard',              [BuyerDashboardController::class, 'index'])->middleware('role:buyer')->name('dashboard');
+    Route::get('/dashboard', function () {
+        $user = Auth::user();
+        if ($user->isSeller()) {
+            return redirect()->route('seller.dashboard');
+        }
+        if ($user->isAdministrator()) {
+            return redirect()->route('admin.dashboard');
+        }
+        return app(BuyerDashboardController::class)->index();
+    })->name('dashboard');
     Route::delete('/seller/projects/{id}',[SellerDashboardController::class, 'destroy'])->middleware('role:seller')->name('seller.projects.destroy');
     Route::get('/seller/projects/create', [SellerDashboardController::class, 'create'])->middleware('role:seller')->name('seller.projects.create');
     Route::post('/seller/projects',       [SellerDashboardController::class, 'store'])->middleware('role:seller')->name('seller.projects.store');
