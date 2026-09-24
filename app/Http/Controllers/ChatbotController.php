@@ -2,192 +2,260 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Services\ChatbotProjectQueryService;
+use App\Services\ChatbotResultService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
+use Throwable;
 
 class ChatbotController extends Controller
 {
-    protected function systemPrompt(): string
-    {
-        return <<<PROMPT
-        Kamu adalah Cami, asisten virtual resmi CAMAR (Carbon Market).
-        Jawab dalam Bahasa Indonesia yang ramah, ringkas, akurat, dan mudah dipahami.
-        Fokus bantuanmu mencakup carbon offset, kredit karbon, kalkulator emisi,
-        cara membeli proyek bagi buyer, cara mendaftarkan dan mengelola proyek
-        bagi seller, status verifikasi, transaksi, serta penggunaan aplikasi CAMAR.
+    public function __construct(
+        private readonly ChatbotResultService $resultService,
+        private readonly ChatbotProjectQueryService $projectQueryService
+    ) {}
 
-        Jangan mengarang data proyek, harga, status akun, transaksi, kebijakan,
-        atau sertifikasi. Jika informasi spesifik pengguna tidak tersedia di
-        percakapan, arahkan pengguna membuka halaman terkait atau menghubungi
-        dukungan CAMAR. Jangan meminta kata sandi, token, OTP, atau data pembayaran.
-        Beri peringatan bahwa jawaban bukan nasihat hukum atau investasi bila relevan.
-        PROMPT;
-    }
-
-    public function send(Request $request): JsonResponse
+    public function send(Request $request)
     {
         $validated = $request->validate([
-            'message' => 'required|string|max:1000',
-            'session_id' => 'nullable|string|max:100',
+            'message' => ['required', 'string', 'max:1000'],
+            'conversation_id' => ['nullable', 'string', 'regex:/^[A-Za-z0-9_-]{8,64}$/'],
         ]);
 
         $userMessage = trim($validated['message']);
-        $sessionId = $validated['session_id'] ?? 'anonymous';
-
-
-        $rateKey = 'cami_rate_'.$sessionId;
-
-        $count = Cache::get($rateKey, 0);
-
-        if ($count >= 20) {
-            return response()->json([
-                'reply' => 'Terlalu banyak permintaan. Silakan coba lagi sebentar.',
-            ], 429);
-        }
-
-        Cache::put($rateKey, $count + 1, now()->addMinute());
-
-        $apiKey = config('services.gemini.api_key');
-
-        $model = 'gemini-3.5-flash-lite';
-
-        if (!$apiKey) {
-            return response()->json([
-                'reply' => 'GEMINI_API_KEY belum diatur pada file .env',
-            ]);
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Conversation History
-        |--------------------------------------------------------------------------
-        */
-
-        $historyKey = 'cami_history_'.$sessionId;
-
-        $history = Cache::get($historyKey, []);
-
-        $contents = [];
-
-        $lastRole = null;
-
-        foreach ($history as $turn) {
-
-            $role = $turn['role'] == 'user'
-                ? 'user'
-                : 'model';
-
-            if ($lastRole == $role) {
-                continue;
-            }
-
-            $contents[] = [
-                'role' => $role,
-                'parts' => [
-                    [
-                        'text' => $turn['text']
-                    ]
-                ]
-            ];
-
-            $lastRole = $role;
-        }
-
-        if ($lastRole == 'user') {
-            array_pop($contents);
-        }
-
-        $contents[] = [
-            'role' => 'user',
-            'parts' => [
-                [
-                    'text' => $userMessage
-                ]
-            ]
-        ];
+        $user = $request->user();
 
         try {
-            $response = Http::timeout(30)
-                ->acceptJson()
-                ->post(
-                    "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}",
-                    [
-                        'system_instruction' => [
-                            'parts' => [
-                                [
-                                    'text' => $this->systemPrompt()
-                                ]
-                            ]
-                        ],
+            $projectAnswer = $this->projectQueryService->answer($userMessage, $user);
+            if ($projectAnswer !== null) {
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [$projectAnswer],
+                ]);
+            }
+        } catch (Throwable $exception) {
+            report($exception);
 
-                        'contents' => $contents,
+            return response()->json([
+                'status' => 'success',
+                'data' => [[
+                    'text' => 'Informasi proyek belum dapat ditampilkan. Silakan coba kembali.',
+                    'custom' => ['type' => 'project_catalog_error'],
+                ]],
+            ]);
+        }
 
-                        'generationConfig' => [
-                            'temperature' => 0.7,
-                            'maxOutputTokens' => 512,
-                        ]
-                    ]
-                );
+        if ($this->isRecommendationRequest($userMessage)) {
+            return response()->json([
+                'status' => 'success',
+                'data' => [$this->completeRecommendation(
+                    ['custom' => ['type' => 'project_recommendation_request']],
+                    $user
+                )],
+            ]);
+        }
 
-            if (!$response->successful()) {
-
-                Log::error('Gemini Error', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
+        $senderId = $user ? 'user_'.$user->id : 'guest_'.session()->getId();
+        if (! empty($validated['conversation_id'])) {
+            $senderId .= '_'.$validated['conversation_id'];
+        }
+        try {
+            $response = Http::acceptJson()
+                ->asJson()
+                ->connectTimeout(3)
+                ->timeout(20)
+                ->post(config('services.rasa.webhook_url'), [
+                    'sender' => $senderId,
+                    'message' => $userMessage,
+                    'metadata' => [
+                        'authenticated' => (bool) $user,
+                        'role' => $user?->role,
+                        'account_type' => $user?->account_category ?? 'guest',
+                    ],
                 ]);
 
-                $error = $response->json('error.message')
-                    ?? $response->body();
+            if ($response->successful()) {
+                $messages = $response->json();
+                if (! is_array($messages)) {
+                    throw new \UnexpectedValueException('Format respons Rasa tidak valid.');
+                }
 
                 return response()->json([
-                    'reply' => "Layanan Cami sedang bermasalah ({$response->status()}): {$error}"
-                ], 502);
+                    'status' => 'success',
+                    'data' => $this->completeResponses($messages, $user),
+                ]);
             }
 
-            $reply =
-                $response->json('candidates.0.content.parts.0.text')
-                ?? 'Maaf, saya belum dapat memberikan jawaban saat ini.';
-
-            // Hapus sintaks Markdown
-            $reply = preg_replace('/\*\*(.*?)\*\*/', '$1', $reply);
-            $reply = preg_replace('/\*(.*?)\*/', '$1', $reply);
-            $reply = preg_replace('/__(.*?)__/', '$1', $reply);
-            $reply = preg_replace('/`(.*?)`/', '$1', $reply);
-            $reply = preg_replace('/^#{1,6}\s*/m', '', $reply);
-
-            // Rapikan baris kosong
-            $reply = preg_replace("/\n{3,}/", "\n\n", $reply);
-
-            $reply = trim($reply);
-            
-            $history[] = [
-                'role' => 'user',
-                'text' => $userMessage,
-            ];
-
-            $history[] = [
-                'role' => 'model',
-                'text' => $reply,
-            ];
-
-            $history = array_slice($history, -10);
-
-            Cache::put($historyKey, $history, now()->addHours(2));
-
             return response()->json([
-                'reply' => trim($reply)
+                'status' => 'error',
+                'message' => 'Gagal terhubung ke Rasa server.',
+            ], 500);
+
+        } catch (ConnectionException $exception) {
+            $previous = $exception->getPrevious();
+
+            $context = $previous instanceof \GuzzleHttp\Exception\ConnectException
+                ? $previous->getHandlerContext()
+                : [];
+
+            $isTimeout = (int) ($context['errno'] ?? 0) === 28
+                || str_contains($exception->getMessage(), 'cURL error 28');
+
+            Log::warning('Permintaan ke Rasa gagal.', [
+                'failure_type' => $isTimeout ? 'timeout' : 'connection_failed',
+                'endpoint' => config('services.rasa.webhook_url'),
+                'curl_errno' => $context['errno'] ?? null,
+                'error' => $exception->getMessage(),
             ]);
 
-        } catch (\Throwable $e) {
-
-            Log::error($e);
-
             return response()->json([
-                'reply' => 'Maaf, Cami belum dapat dihubungi. Silakan coba lagi sebentar.',
-            ], 503);
+                'status' => 'error',
+                'message' => $isTimeout
+                    ? 'Respons chatbot terlalu lama. Silakan coba lagi sebentar.'
+                    : 'Chatbot belum dapat dihubungi. Silakan coba lagi sebentar.',
+            ], $isTimeout ? 504 : 503);
         }
+    }
+
+    private function completeResponses(array $messages, ?User $user): array
+    {
+        $hasCalculation = collect($messages)->contains(
+            fn ($message) => is_array($message)
+                && ($message['custom']['type'] ?? null) === 'calculation_request'
+        );
+
+        return collect($messages)
+            ->reject(fn ($message) => $hasCalculation
+                && is_array($message)
+                && ($message['text'] ?? null) === 'Data aktivitas sudah lengkap dan siap dihitung oleh CAMAR.')
+            ->map(function ($message) use ($user) {
+                $custom = is_array($message) ? ($message['custom'] ?? null) : null;
+                if (is_array($custom) && ($custom['type'] ?? null) === 'project_recommendation_request') {
+                    return $this->completeRecommendation($message, $user);
+                }
+
+                if (! is_array($custom) || ($custom['type'] ?? null) !== 'calculation_request') {
+                    return $message;
+                }
+
+                if (! $user || ! is_array($custom['data'] ?? null)) {
+                    $message['text'] = 'Sesi akun tidak ditemukan. Silakan masuk kembali.';
+                    $message['custom'] = ['type' => 'calculation_error'];
+
+                    return $message;
+                }
+
+                $declaredType = $custom['account_type'] ?? null;
+                $dataType = $this->activityAccountType($custom['data']);
+                if (
+                    ($declaredType ?? $dataType) !== $user->account_category
+                    || ($dataType !== null && $dataType !== $user->account_category)
+                ) {
+                    $message['text'] = 'Tipe akun berubah saat pengisian. Silakan mulai perhitungan kembali.';
+                    $message['custom'] = ['type' => 'calculation_error'];
+
+                    return $message;
+                }
+
+                try {
+                    $result = $this->resultService->process($user, $custom['data']);
+                    $message['text'] = $this->resultText($result);
+                    $message['custom'] = array_merge(
+                        ['type' => 'calculation_result'],
+                        $result
+                    );
+                } catch (InvalidArgumentException $exception) {
+                    $message['text'] = $exception->getMessage();
+                    $message['custom'] = ['type' => 'calculation_error'];
+                } catch (Throwable $exception) {
+                    report($exception);
+                    $message['text'] = 'Hasil belum dapat disimpan. Silakan coba kembali.';
+                    $message['custom'] = ['type' => 'calculation_error'];
+                }
+
+                return $message;
+            })->values()->all();
+    }
+
+    private function completeRecommendation(array $message, ?User $user): array
+    {
+        if (! $user || ! $user->isBuyer()) {
+            $message['text'] = 'Masuk sebagai buyer terlebih dahulu untuk melihat rekomendasi proyekmu.';
+            $message['custom'] = ['type' => 'project_recommendation_error'];
+
+            return $message;
+        }
+
+        try {
+            $result = $this->resultService->recommendExisting($user);
+            $text = $result['source'] === 'latest_emission'
+                ? 'Berdasarkan hasil emisi terakhirmu sebesar '
+                    .$this->formatNumber($result['total_kg']).' kg CO2e/tahun, berikut proyek yang sesuai:'
+                : 'Kamu belum memiliki hasil emisi tersimpan. Berikut pilihan proyek awal yang tersedia. Hitung emisi untuk rekomendasi yang lebih sesuai.';
+
+            if (empty($result['recommendations'])) {
+                $text .= "\nBelum ada proyek offset terverifikasi dengan stok tersedia saat ini.";
+            }
+
+            $message['text'] = $text;
+            $message['custom'] = array_merge(['type' => 'project_recommendation_result'], $result);
+        } catch (Throwable $exception) {
+            report($exception);
+            $message['text'] = 'Rekomendasi proyek belum dapat ditampilkan. Silakan coba kembali.';
+            $message['custom'] = ['type' => 'project_recommendation_error'];
+        }
+
+        return $message;
+    }
+
+    private function isRecommendationRequest(string $message): bool
+    {
+        $message = Str::lower($message);
+
+        return $message === '/ask_project_recommendation'
+            || (Str::contains($message, 'proyek') && Str::contains($message, [
+                'rekomendas', 'carikan', 'cocok', 'sesuai', 'saran', 'pilih', 'relevan',
+            ]));
+    }
+
+    private function activityAccountType(array $data): ?string
+    {
+        $hasPersonalFields = array_key_exists('energy_fuel', $data);
+        $hasCompanyFields = array_key_exists('stationary_fuel', $data);
+
+        if ($hasPersonalFields === $hasCompanyFields) {
+            return null;
+        }
+
+        return $hasPersonalFields ? 'personal' : 'company';
+    }
+
+    private function resultText(array $result): string
+    {
+        $mode = $result['mode'] === 'company' ? 'perusahaan' : 'individu';
+
+        $text = "Hasil estimasi emisi akun {$mode}:\n"
+            .'Scope 1: '.$this->formatNumber($result['scope1_kg'])." kg CO2e\n"
+            .'Scope 2: '.$this->formatNumber($result['scope2_kg'])." kg CO2e\n"
+            .'Scope 3: '.$this->formatNumber($result['scope3_kg'])." kg CO2e\n"
+            .'Total: '.$this->formatNumber($result['total_kg']).' kg CO2e '
+            .'('.$this->formatNumber($result['total_ton'], 6)." ton)\n"
+            .'Estimasi biaya offset: Rp '.$this->formatNumber($result['estimated_cost'], 0);
+
+        if (empty($result['recommendations'])) {
+            $text .= "\nBelum ada proyek offset yang tersedia untuk direkomendasikan.";
+        }
+
+        return $text;
+    }
+
+    private function formatNumber(float|int $value, int $decimals = 2): string
+    {
+        return number_format((float) $value, $decimals, ',', '.');
     }
 }
