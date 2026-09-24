@@ -1066,7 +1066,7 @@
                     <div class="module-content" id="c_hotel-content">
                         <div class="ref-info-bar">
                             <i class="fas fa-info-circle"></i>
-                            <span>GHG Protocol Scope 3 Cat.6 · EF: 20,6 kgCO₂e/kamar·malam (DEFRA 2023)</span>
+                            <span>GHG Protocol Scope 3 Cat.6 · EF: 49,37 kgCO₂e/kamar·malam (Bank Indonesia 2026, DEFRA 2025)</span>
                         </div>
                         <div id="rows_c_hotel">
                             <div class="entry-row" data-group="c_hotel">
@@ -1084,7 +1084,7 @@
                                     </div>
                                     <div class="input-group ef-display-group">
                                         <label class="input-label">Faktor Emisi</label>
-                                        <div class="ef-chip">20,6 kgCO₂e/kamar·malam<br><small>DEFRA 2023 · GHG Protocol Cat.6</small></div>
+                                        <div class="ef-chip">49,37 kgCO₂e/kamar·malam<br><small>Bank Indonesia 2026 · DEFRA 2025</small></div>
                                     </div>
                                 </div>
                                 <button type="button" class="btn-remove-row" data-remove-row aria-label="Hapus baris"><i class="fas fa-times"></i></button>
@@ -1324,7 +1324,7 @@
                         <li>Pesawat Bisnis: <strong>0,266</strong> kgCO₂e/pax·km</li>
                         <li>Pesawat First: <strong>0,399</strong> kgCO₂e/pax·km</li>
                         <li>Kereta: <strong>0,037</strong> kgCO₂e/pax·km</li>
-                        <li>Hotel: <strong>20,6</strong> kgCO₂e/kamar·malam</li>
+                        <li>Hotel: <strong>49,37</strong> kgCO₂e/kamar·malam</li>
                     </ul>
                     <p class="factor-ref">DEFRA 2023 · GHG Protocol Scope 3 Cat.6</p>
                 </div>

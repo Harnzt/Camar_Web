@@ -35,9 +35,11 @@ return [
         ],
     ],
 
-    'gemini' => [
-        'api_key' => env('GEMINI_API_KEY'),
+    'rasa' => [
+        'webhook_url' => env(
+            'RASA_WEBHOOK_URL',
+            'http://127.0.0.1:5005/webhooks/rest/webhook'
+        ),
     ],
-
 
 ];
