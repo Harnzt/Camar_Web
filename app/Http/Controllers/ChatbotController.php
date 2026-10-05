@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ChatbotInformationService;
 use App\Services\ChatbotProjectQueryService;
 use App\Services\ChatbotResultService;
 use Illuminate\Http\Client\ConnectionException;
@@ -17,7 +18,8 @@ class ChatbotController extends Controller
 {
     public function __construct(
         private readonly ChatbotResultService $resultService,
-        private readonly ChatbotProjectQueryService $projectQueryService
+        private readonly ChatbotProjectQueryService $projectQueryService,
+        private readonly ChatbotInformationService $informationService
     ) {}
 
     public function send(Request $request)
@@ -87,7 +89,7 @@ class ChatbotController extends Controller
 
                 return response()->json([
                     'status' => 'success',
-                    'data' => $this->completeResponses($messages, $user),
+                    'data' => $this->completeResponses($messages, $user, $userMessage),
                 ]);
             }
 
@@ -122,7 +124,7 @@ class ChatbotController extends Controller
         }
     }
 
-    private function completeResponses(array $messages, ?User $user): array
+    private function completeResponses(array $messages, ?User $user, string $userMessage): array
     {
         $hasCalculation = collect($messages)->contains(
             fn ($message) => is_array($message)
@@ -133,10 +135,25 @@ class ChatbotController extends Controller
             ->reject(fn ($message) => $hasCalculation
                 && is_array($message)
                 && ($message['text'] ?? null) === 'Data aktivitas sudah lengkap dan siap dihitung oleh CAMAR.')
-            ->map(function ($message) use ($user) {
+            ->map(function ($message) use ($user, $userMessage) {
                 $custom = is_array($message) ? ($message['custom'] ?? null) : null;
                 if (is_array($custom) && ($custom['type'] ?? null) === 'project_recommendation_request') {
                     return $this->completeRecommendation($message, $user);
+                }
+
+                $informationTypes = [
+                    'emission_explanation_request',
+                    'project_information_request',
+                    'project_verification_request',
+                    'recommendation_explanation_request',
+                ];
+                if (is_array($custom) && in_array($custom['type'] ?? null, $informationTypes, true)) {
+                    return $this->completeInformationRequest(
+                        $message,
+                        $custom,
+                        $user,
+                        $userMessage
+                    );
                 }
 
                 if (! is_array($custom) || ($custom['type'] ?? null) !== 'calculation_request') {
@@ -199,7 +216,7 @@ class ChatbotController extends Controller
                 : 'Kamu belum memiliki hasil emisi tersimpan. Berikut pilihan proyek awal yang tersedia. Hitung emisi untuk rekomendasi yang lebih sesuai.';
 
             if (empty($result['recommendations'])) {
-                $text .= "\nBelum ada proyek offset terverifikasi dengan stok tersedia saat ini.";
+                $text .= "\nBelum ada proyek offset yang disetujui CAMAR dengan stok tersedia saat ini.";
             }
 
             $message['text'] = $text;
@@ -213,9 +230,40 @@ class ChatbotController extends Controller
         return $message;
     }
 
+    private function completeInformationRequest(
+        array $message,
+        array $custom,
+        ?User $user,
+        string $userMessage
+    ): array {
+        try {
+            $answer = $this->informationService->answer(
+                (string) $custom['type'],
+                (string) ($custom['query'] ?? $userMessage),
+                $user
+            );
+
+            return array_merge($message, $answer);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            $message['text'] = 'Informasi tersebut belum dapat ditampilkan. Silakan coba kembali.';
+            $message['custom'] = ['type' => 'information_error'];
+
+            return $message;
+        }
+    }
+
     private function isRecommendationRequest(string $message): bool
     {
         $message = Str::lower($message);
+
+        if (Str::contains($message, [
+            'mengapa', 'kenapa', 'alasan', 'dasar rekomendasi', 'skor rekomendasi',
+            'cara memilih', 'bagaimana memilih', 'panduan memilih',
+        ])) {
+            return false;
+        }
 
         return $message === '/ask_project_recommendation'
             || (Str::contains($message, 'proyek') && Str::contains($message, [
