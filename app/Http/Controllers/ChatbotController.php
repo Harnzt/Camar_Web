@@ -25,16 +25,18 @@ class ChatbotController extends Controller
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:1000'],
             'conversation_id' => ['nullable', 'string', 'regex:/^[A-Za-z0-9_-]{8,64}$/'],
+            'session_id' => ['nullable', 'string'],
         ]);
 
         $userMessage = trim($validated['message']);
-        $user = $request->user();
+        $user = auth('sanctum')->user() ?? $request->user();
 
         try {
             $projectAnswer = $this->projectQueryService->answer($userMessage, $user);
             if ($projectAnswer !== null) {
                 return response()->json([
                     'status' => 'success',
+                    'reply' => $projectAnswer['text'] ?? '',
                     'data' => [$projectAnswer],
                 ]);
             }
@@ -43,6 +45,7 @@ class ChatbotController extends Controller
 
             return response()->json([
                 'status' => 'success',
+                'reply' => 'Informasi proyek belum dapat ditampilkan. Silakan coba kembali.',
                 'data' => [[
                     'text' => 'Informasi proyek belum dapat ditampilkan. Silakan coba kembali.',
                     'custom' => ['type' => 'project_catalog_error'],
@@ -51,18 +54,21 @@ class ChatbotController extends Controller
         }
 
         if ($this->isRecommendationRequest($userMessage)) {
+            $rec = $this->completeRecommendation(
+                ['custom' => ['type' => 'project_recommendation_request']],
+                $user
+            );
             return response()->json([
                 'status' => 'success',
-                'data' => [$this->completeRecommendation(
-                    ['custom' => ['type' => 'project_recommendation_request']],
-                    $user
-                )],
+                'reply' => $rec['text'] ?? '',
+                'data' => [$rec],
             ]);
         }
 
+        $conversationId = $validated['conversation_id'] ?? $validated['session_id'] ?? null;
         $senderId = $user ? 'user_'.$user->id : 'guest_'.session()->getId();
-        if (! empty($validated['conversation_id'])) {
-            $senderId .= '_'.$validated['conversation_id'];
+        if (! empty($conversationId)) {
+            $senderId .= '_'.$conversationId;
         }
         try {
             $response = Http::acceptJson()
@@ -85,9 +91,13 @@ class ChatbotController extends Controller
                     throw new \UnexpectedValueException('Format respons Rasa tidak valid.');
                 }
 
+                $responseData = $this->completeResponses($messages, $user);
+                $replyText = collect($responseData)->pluck('text')->filter()->join("\n\n");
+
                 return response()->json([
                     'status' => 'success',
-                    'data' => $this->completeResponses($messages, $user),
+                    'reply' => $replyText,
+                    'data' => $responseData,
                 ]);
             }
 
