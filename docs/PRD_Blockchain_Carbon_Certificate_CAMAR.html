@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>PRD - Sistem Sertifikasi Carbon Offset Berbasis Blockchain (CAMAR)</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 16mm 18mm 16mm;
+            @bottom-right {
+                content: counter(page);
+                font-family: Arial, sans-serif;
+                font-size: 9pt;
+                color: #64748b;
+            }
+        }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            background: #ffffff;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            font-size: 10pt;
+        }
+        .header-box {
+            text-align: center;
+            border-bottom: 3px double #059669;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+        .title {
+            color: #065f46;
+            font-size: 20pt;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            letter-spacing: 0.5px;
+        }
+        .subtitle {
+            color: #475569;
+            font-size: 11pt;
+            font-weight: 600;
+            margin: 0;
+        }
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 22px;
+            font-size: 9pt;
+        }
+        .meta-table td {
+            padding: 7px 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .meta-table td.label {
+            background-color: #f0fdf4;
+            color: #065f46;
+            font-weight: 700;
+            width: 28%;
+        }
+        .meta-table td.value {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        h2 {
+            color: #065f46;
+            font-size: 13pt;
+            border-left: 4px solid #059669;
+            padding-left: 10px;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            page-break-after: avoid;
+        }
+        h3 {
+            color: #0f766e;
+            font-size: 10.5pt;
+            margin-top: 12px;
+            margin-bottom: 6px;
+            page-break-after: avoid;
+        }
+        p {
+            margin: 0 0 8px 0;
+            text-align: justify;
+        }
+        ul {
+            margin: 4px 0 10px 20px;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 16px 0;
+            font-size: 8.5pt;
+        }
+        .data-table th {
+            background-color: #065f46;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 8px 10px;
+            text-align: left;
+            border: 1px solid #065f46;
+        }
+        .data-table td {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e1;
+            vertical-align: top;
+        }
+        .data-table tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+        .badge {
+            display: inline-block;
+            background: #d1fae5;
+            color: #065f46;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 8pt;
+        }
+        .callout {
+            background: #f0fdf4;
+            border: 1px solid #a7f3d0;
+            border-left: 4px solid #059669;
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 9.5pt;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-box">
+        <h1 class="title">PRODUCT REQUIREMENT DOCUMENT (PRD)</h1>
+        <div class="subtitle">Implementasi Sertifikasi Carbon Offset Berbasis Blockchain (Polygon Amoy Testnet)<br>pada Platform Web CAMAR (Tugas Akhir / Skripsi)</div>
+    </div>
+
+    <table class="meta-table">
+        <tr>
+            <td class="label">Nama Proyek</td>
+            <td class="value"><strong>CAMAR (Carbon Offset Platform)</strong></td>
+        </tr>
+        <tr>
+            <td class="label">Fitur Utama</td>
+            <td class="value">Sertifikasi Digital Terdesentralisasi & Verifikasi Keaslian On-Chain</td>
+        </tr>
+        <tr>
+            <td class="label">Arsitektur Teknis</td>
+            <td class="value">Laravel 12 (PHP 8.2+), MySQL, Node.js + ethers.js (Worker Bridge), Solidity</td>
+        </tr>
+        <tr>
+            <td class="label">Jaringan Blockchain</td>
+            <td class="value">Polygon PoS (Amoy Testnet) - Ramah Lingkungan & Bebas Biaya Transaksi Riil</td>
+        </tr>
+        <tr>
+            <td class="label">Standar Smart Contract</td>
+            <td class="value">Soulbound Token (ERC-721 Non-Transferable) & SHA-256 Hash Notarization</td>
+        </tr>
+        <tr>
+            <td class="label">Target Evaluasi</td>
+            <td class="value">Tugas Akhir / Skripsi Program Studi Informatika / Sistem Informasi / RPL</td>
+        </tr>
+    </table>
+
+    <h2>1. Latar Belakang & Rumusan Masalah</h2>
+    <h3>1.1 Konteks Proyek CAMAR</h3>
+    <p>
+        Platform CAMAR dirancang untuk menjembatani penyedia proyek penyerapan karbon (Seller) dengan pembeli emisi (Buyer). Saat ini, CAMAR telah dilengkapi alur pemesanan lengkap: penghitungan emisi via kalkulator, checkout via Midtrans payment gateway, verifikasi transaksi oleh Auditor Pemerintah, hingga penerbitan nomor sertifikat internal (<code>CAMAR-CERT-YYYYMMDD-XXXXXX</code>) yang dapat dicetak oleh Buyer.
+    </p>
+
+    <h3>1.2 Permasalahan yang Dihadapi (Problem Statement)</h3>
+    <ul>
+        <li><strong>Kerapuhan Basis Data Terpusat (Centralized DB Vulnerability):</strong> Penyimpanan sertifikat pada database MySQL tradisional memiliki risiko manipulasi sepihak oleh pengguna dengan hak akses tingkat tinggi.</li>
+        <li><strong>Isu Klaim Ganda (Double Counting):</strong> Sertifikat konvensional berformat PDF tanpa bukti otentikasi on-chain rentan disalahgunakan atau diklaim berulang kali pada audit kepatuhan lingkungan yang berbeda.</li>
+        <li><strong>Ketiadaan Verifikasi Publik Mandiri:</strong> Publik, akademisi, atau auditor eksternal tidak memiliki akses independen untuk mengonfirmasi keaslian sertifikat tanpa mendaftar ke platform CAMAR.</li>
+    </ul>
+
+    <h3>1.3 Solusi yang Diajukan</h3>
+    <p>
+        Membangun lapisan verifikasi berbasis Smart Contract di jaringan <strong>Polygon Amoy Testnet</strong>. Setiap sertifikat yang diterbitkan akan dihitung sidik jari digitalnya (SHA-256) dan dicetak sebagai <strong>Soulbound Token (SBT)</strong>. Sertifikat dilengkapi QR Code dinamis menuju halaman verifikasi publik yang tersinkronisasi langsung dengan <em>Block Explorer</em> (Polygonscan).
+    </p>
+
+    <h2>2. Arsitektur Sistem (Opsi C: Hybrid Worker)</h2>
+    <div class="callout">
+        <strong>Pola Arsitektur:</strong> Laravel bertindak sebagai pengatur alur transaksi, antrean, dan database lokal, sedangkan worker mandiri berbasis <code>ethers.js</code> mengeksekusi penandatanganan transaksi dan interaksi smart contract secara asinkron (Gasless bagi Buyer).
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">Tahapan Alur</th>
+                <th>Mekanisme Kerja & Integrasi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>1. Approval & Hashing</strong></td>
+                <td>Auditor menyetujui transaksi di Admin Panel. Laravel men-generate nomor sertifikat dan menghitung SHA-256 hash dari data kanonikal sertifikat.</td>
+            </tr>
+            <tr>
+                <td><strong>2. Panggilan Worker</strong></td>
+                <td>Laravel memicu skrip <code>issue-certificate.js</code> (via <code>Process::run</code> atau Queue Job) dengan membawa data pesanan dan hash dokumen.</td>
+            </tr>
+            <tr>
+                <td><strong>3. Eksekusi On-Chain</strong></td>
+                <td>Worker menandatangani transaksi menggunakan Private Key sistem dan memanggil fungsi <code>issueCertificate()</code> pada Smart Contract Polygon Amoy.</td>
+            </tr>
+            <tr>
+                <td><strong>4. Konfirmasi & Penyimpanan</strong></td>
+                <td>Jaringan mengembalikan Transaction Hash (TxHash) & Token ID. Laravel memperbarui record transaksi di tabel <code>orders</code>.</td>
+            </tr>
+            <tr>
+                <td><strong>5. Verifikasi Publik</strong></td>
+                <td>Buyer menerima sertifikat berstempel on-chain dengan QR Code dinamis yang langsung dapat dipindai oleh pihak luar.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h2>3. Spesifikasi Basis Data (Database Schema)</h2>
+    <p>Tabel <code>orders</code> ditambahkan kolom metadata blockchain untuk menjamin integritas dan rekam jejak:</p>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">Nama Kolom</th>
+                <th style="width: 20%;">Tipe Data</th>
+                <th>Fungsi & Deskripsi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>certificate_hash</code></td>
+                <td>VARCHAR(64), Nullable</td>
+                <td>Sidik jari digital dokumen (SHA-256) untuk validasi integritas anti-manipulasi.</td>
+            </tr>
+            <tr>
+                <td><code>blockchain_network</code></td>
+                <td>VARCHAR(50), Nullable</td>
+                <td>Nama jaringan blockchain (Default: <em>Polygon Amoy Testnet</em>).</td>
+            </tr>
+            <tr>
+                <td><code>contract_address</code></td>
+                <td>VARCHAR(42), Nullable</td>
+                <td>Alamat kontrak pintar (Smart Contract) yang digunakan pada saat penerbitan.</td>
+            </tr>
+            <tr>
+                <td><code>blockchain_tx_hash</code></td>
+                <td>VARCHAR(66), Nullable</td>
+                <td>Hash transaksi unik dari jaringan Polygon sebagai bukti on-chain permanen.</td>
+            </tr>
+            <tr>
+                <td><code>blockchain_token_id</code></td>
+                <td>BIGINT UNSIGNED, Nullable</td>
+                <td>ID token unik on-chain (Nomor urut NFT/Soulbound Token).</td>
+            </tr>
+            <tr>
+                <td><code>blockchain_status</code></td>
+                <td>ENUM('unminted','pending','minted','failed')</td>
+                <td>Status sinkronisasi blockchain (Default: <code>unminted</code>).</td>
+            </tr>
+            <tr>
+                <td><code>blockchain_minted_at</code></td>
+                <td>TIMESTAMP, Nullable</td>
+                <td>Waktu persis konfirmasi blok transaksi di jaringan blockchain.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>4. Rincian Kebutuhan Fungsional (Functional Requirements)</h2>
+    <ul>
+        <li><strong>FR-1 (Smart Contract Soulbound):</strong>
+            <ul>
+                <li>Ditulis dalam bahasa Solidity (<code>CamarCarbonCertificate.sol</code>) berbasis standar ERC-721.</li>
+                <li>Fungsi <code>issueCertificate()</code> mencatat: nomor sertifikat, alamat penerima, tonase CO2, hash dokumen, dan waktu penerbitan.</li>
+                <li>Fungsi transfer dinonaktifkan (Soulbound) sehingga token tidak dapat diperjualbelikan kembali di secondary market.</li>
+            </ul>
+        </li>
+        <li><strong>FR-2 (Node.js Worker Bridge):</strong>
+            <ul>
+                <li>Berada pada direktori <code>blockchain/scripts/issue-certificate.js</code>.</li>
+                <li>Menghubungkan aplikasi ke RPC Node Polygon Amoy menggunakan pustaka <code>ethers.js</code> v6.</li>
+                <li>Mengembalikan keluaran terstruktur berformat JSON (status, tx_hash, token_id, gas_used).</li>
+            </ul>
+        </li>
+        <li><strong>FR-3 (Modul Penerbitan di Laravel):</strong>
+            <ul>
+                <li>Terintegrasi pada aksi <code>TransactionManagementController@update</code> saat status diubah menjadi <code>completed</code>.</li>
+                <li>Mencatat seluruh rekam jejak penerbitan ke tabel <code>admin_activity_logs</code>.</li>
+            </ul>
+        </li>
+        <li><strong>FR-4 (Pembaruan Template Sertifikat Blade):</strong>
+            <ul>
+                <li>Memperkaya tampilan <code>resources/views/main_page/dashboard-buyer/certificate.blade.php</code> dengan badge <em>"Verified on Polygon Blockchain"</em>.</li>
+                <li>Menampilkan TxHash, SHA-256 Hash, serta Dynamic QR Code verifikasi publik.</li>
+            </ul>
+        </li>
+        <li><strong>FR-5 (Portal Verifikasi Publik):</strong>
+            <ul>
+                <li>Endpoint publik <code>/verify/certificate/{code}</code> yang dapat diakses tanpa autentikasi.</li>
+                <li>Mendeteksi manipulasi data lokal (Tamper-evident system).</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>5. Skenario Pengujian untuk Laporan Skripsi (Bab 4)</h2>
+    <div class="callout">
+        <strong>Materi Pengujian Akademis:</strong>
+        <ol style="margin: 4px 0 0 16px; padding: 0;">
+            <li><strong>Pengujian Fungsional (Black-box):</strong> Memvalidasi seluruh skenario operasional dari pembayaran hingga sertifikat berhasil di-mint.</li>
+            <li><strong>Pengujian Integritas Dokumen (Tamper-evident Test):</strong> Memanipulasi nilai data transaksi langsung pada database MySQL, lalu membuktikan bahwa portal verifikasi berhasil mendeteksi anomali ketidakcocokan hash dengan blockchain.</li>
+            <li><strong>Pengujian Kinerja & Gas Consumption:</strong> Mengukur waktu respon signing transaksi, durasi konfirmasi blok Polygon (2–4 detik), dan kebutuhan gas fee.</li>
+        </ol>
+    </div>
+
+</body>
+</html>

@@ -1189,11 +1189,13 @@ window.saveCalculationToDatabase = function(e) {
 
     // PERBAIKAN 2: Menggunakan penanganan event target yang aman dan kompatibel di semua browser
     const currentEvent = e || window.event;
-    const btn = currentEvent ? currentEvent.currentTarget || currentEvent.target : null;
+    const btn = currentEvent?.target
+        ? (currentEvent.target.closest('[data-save-calculation]') || currentEvent.target)
+        : document.querySelector('[data-save-calculation]');
     
-    if (btn) {
+    if (btn && btn.style) {
         btn.disabled = true;
-        btn.innerHTML = 'Menyimpan ke Dashboard...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan ke Dashboard...';
     }
 
     // 1. Kirim data ke database Laravel via AJAX POST
@@ -1207,66 +1209,75 @@ window.saveCalculationToDatabase = function(e) {
         body: JSON.stringify(window.currentCalculationData)
     })
     .then(res => {
-        if (!res.ok) throw new Error('Server bermasalah');
+        if (!res.ok) throw new Error('Server bermasalah (' + res.status + ')');
         return res.json();
     })
     .then(res => {
         if (res.success) {
-            alert('Selamat! Hasil kalkulasi karbon Anda berhasil disimpan ke database dashboard.');
-
             const recommendationEl = document.getElementById('rekomendasi-proyek');
-            if (recommendationEl && res.data.proyek) {
-                const scoreLabel = res.data.skor_rekomendasi !== null
+            if (recommendationEl && res.data && res.data.proyek) {
+                const scoreLabel = (res.data.skor_rekomendasi !== null && res.data.skor_rekomendasi !== undefined)
                     ? ` (${Number(res.data.skor_rekomendasi).toFixed(0)}% cocok)`
                     : '';
                 recommendationEl.textContent = res.data.proyek + scoreLabel;
-                recommendationEl.title = (res.data.alasan_rekomendasi || []).join(' ');
+                recommendationEl.title = Array.isArray(res.data.alasan_rekomendasi) ? res.data.alasan_rekomendasi.join(' ') : '';
             }
             
-            if (btn) {
-                btn.innerHTML = 'Berhasil Disimpan';
+            if (btn && btn.style) {
+                btn.innerHTML = '<i class="fas fa-check"></i> Berhasil Disimpan';
                 btn.style.background = '#67C090';
                 btn.style.borderColor = '#67C090';
             }
 
             // 2. Ambil daftar histori lama, jika belum ada buat array kosong []
             const storageKey = window.CARBON_STORAGE_KEY || 'carbon_history_guest';
-            let historyList = JSON.parse(localStorage.getItem(storageKey)) || [];
+            let historyList = [];
+            try {
+                historyList = JSON.parse(localStorage.getItem(storageKey)) || [];
+            } catch (err) {
+                historyList = [];
+            }
 
             // Susun data objek baru lengkap dengan waktu simpan (timestamp)
             const newHistoryItem = {
                 id: Date.now(),
                 date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit' }),
-                total_kg: window.currentCalculationData.total_kg,
-                biaya: res.data.biaya,
-                proyek: res.data.proyek
+                total_kg: window.currentCalculationData ? window.currentCalculationData.total_kg : 0,
+                biaya: res.data ? res.data.biaya : '-',
+                proyek: res.data ? res.data.proyek : '-'
             };
 
             // Masukkan data baru ke dalam daftar teratas (unshift)
             historyList.unshift(newHistoryItem);
 
             // Simpan kembali daftar array utuh ke localStorage browser
-            localStorage.setItem(storageKey, JSON.stringify(historyList));
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(historyList));
+            } catch (storageErr) {
+                console.warn('LocalStorage error:', storageErr);
+            }
             
-            // Muat ulang daftar tampilan riwayat di bawah secara realtime (pastikan fungsi ini ada)
+            // Muat ulang daftar tampilan riwayat di bawah secara realtime
             if (typeof renderHistoryContainer === 'function') {
                 renderHistoryContainer();
             }
+
+            alert('Selamat! Hasil kalkulasi karbon Anda berhasil disimpan ke database dashboard.');
         } else {
-            alert('Gagal menyimpan ke database: ' + res.message);
+            alert('Gagal menyimpan ke database: ' + (res.message || 'Terjadi kesalahan saat memproses data.'));
             resetButton(btn);
         }
     })
     .catch((err) => {
-        console.error(err);
-        alert('Terjadi kendala jaringan saat mencoba menghubungi server.');
+        console.error('Error saat menyimpan kalkulasi:', err);
+        alert('Terjadi kendala saat mencoba menghubungi server.');
         resetButton(btn);
     });
 };
 
 // Fungsi pembantu untuk mengembalikan state tombol jika gagal
 function resetButton(btn) {
-    if (btn) {
+    if (btn && btn.style) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Simpan Hasil ke Dashboard';
     }
@@ -1276,7 +1287,6 @@ function resetButton(btn) {
 // 7. RENDER DAFTAR SEJARAH RIWAYAT PERHITUNGAN (Multi-List)
 // ====================================
 function renderHistoryContainer() {
-    // Cari apakah ada container khusus riwayat, jika tidak ada kita buat dinamis di bawah result-box
     let historyWrapper = document.getElementById('history-log-wrapper');
     const resultBox = document.getElementById('result-box');
     
@@ -1286,19 +1296,24 @@ function renderHistoryContainer() {
         historyWrapper = document.createElement('div');
         historyWrapper.id = 'history-log-wrapper';
         historyWrapper.style.cssText = 'margin-top: 25px; padding: 20px; background: #fff; border-radius: 16px; border: 2px solid #e9ecef; box-shadow: 0 4px 20px rgba(0,0,0,.08);';
-        // Sisipkan container riwayat tepat di bawah kotak result box utama
         resultBox.parentNode.insertBefore(historyWrapper, resultBox.nextSibling);
     }
 
-    const historyList = JSON.parse(localStorage.getItem('carbon_history_list')) || [];
-    if (historyList.length > 0) {
+    const currentKey = window.CARBON_STORAGE_KEY || 'carbon_history_guest';
+    let historyList = [];
+    try {
+        historyList = JSON.parse(localStorage.getItem(currentKey)) || [];
+    } catch (e) {
+        historyList = [];
+    }
+
+    if (historyList.length === 0) {
         historyWrapper.style.display = 'none';
         return;
     }
 
     historyWrapper.style.display = 'block';
     
-    // Set judul header daftar riwayat kamu
     let htmlContent = `
         <h4 style="font-family: 'Manrope', sans-serif; font-weight: 800; color: #124170; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-history" style="color: #67C090;"></i> Riwayat Perhitungan Kalkulator Anda
@@ -1306,19 +1321,18 @@ function renderHistoryContainer() {
         <div style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
     `;
 
-    // Looping cetak baris demi baris riwayat kalkulasi yang pernah disimpan
     historyList.forEach((item, index) => {
-        const ton = (item.total_kg / 1000).toFixed(3);
+        const ton = ((item.total_kg || 0) / 1000).toFixed(3);
         htmlContent += `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #f8f9fa; border-radius: 10px; border: 1px solid #dee2e6; font-size: .85rem;">
                 <div>
                     <span style="color: #6c757d; font-size: .72rem; display: block; font-weight: 600;">📋 Perhitungan #${historyList.length - index} — ${item.date}</span>
                     <strong style="color: #124170; font-size: .95rem;">${ton} ton CO₂e</strong> 
-                    <span style="color: #495057; font-size: .8rem; margin-left: 10px;">(Estimasi: ${item.biaya})</span>
+                    <span style="color: #495057; font-size: .8rem; margin-left: 10px;">(Estimasi: ${item.biaya || '-'})</span>
                 </div>
                 <div style="text-align: right;">
                     <span style="font-size: .75rem; background: rgba(38,102,127,.1); color: #26667F; padding: 3px 8px; border-radius: 20px; font-weight: 700;">
-                        📍 ${item.proyek}
+                        📍 ${item.proyek || '-'}
                     </span>
                 </div>
             </div>
@@ -1327,7 +1341,6 @@ function renderHistoryContainer() {
 
     htmlContent += `</div>`;
     
-    // Tambahkan tombol opsional untuk menghapus semua log jejak memori lokal
     htmlContent += `
         <button type="button" data-clear-carbon-history style="background: none; border: none; color: #e74c3c; font-size: .75rem; font-weight: 700; cursor: pointer; margin-top: 12px; padding: 0; display: flex; align-items: center; gap: 4px;">
             Hapus Semua Riwayat Lokal
@@ -1351,14 +1364,13 @@ window.clearCarbonHistory = function() {
         .then(res => res.json())
         .then(res => {
             if (res.success) {
-                // 2. Jika di database sukses terhapus, bersihkan juga yang di localStorage browser
+                const currentKey = window.CARBON_STORAGE_KEY || 'carbon_history_guest';
+                localStorage.removeItem(currentKey);
                 localStorage.removeItem('carbon_history_list');
                 
-                // Sembunyikan kotak log riwayat di layar
                 const wrapper = document.getElementById('history-log-wrapper');
                 if (wrapper) wrapper.style.display = 'none';
 
-                // Kosongkan atau sembunyikan juga result-box utama agar bersih kembali
                 const box = document.getElementById('result-box');
                 if (box) box.style.display = 'none';
 
@@ -1375,8 +1387,6 @@ window.clearCarbonHistory = function() {
 
 // Pastikan saat halaman dimuat ulang pertama kali, seluruh daftar list langsung digambar otomatis
 document.addEventListener('DOMContentLoaded', function() {
-    
-    // PERIKSA STATUS: Jika window.CARBON_STORAGE_KEY bernilai null (User Belum Login)
     if (!window.CARBON_STORAGE_KEY) {
         console.log("Status: Guest. Mengosongkan riwayat kalkulator.");
         
@@ -1386,69 +1396,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const box = document.getElementById('result-box');
         if (box) box.style.display = 'none';
         
-        return; // Hentikan eksekusi di sini untuk Guest
+        return;
     }
 
-    // JALUR USER LOGIN: Gambar ulang daftar riwayat dari localStorage miliknya
-    function renderHistoryContainer() {
-        let historyWrapper = document.getElementById('history-log-wrapper');
-        const resultBox = document.getElementById('result-box');
-        
-        if (!resultBox) return;
-
-        if (!historyWrapper) {
-            historyWrapper = document.createElement('div');
-            historyWrapper.id = 'history-log-wrapper';
-            historyWrapper.style.cssText = 'margin-top: 25px; padding: 20px; background: #fff; border-radius: 16px; border: 2px solid #e9ecef; box-shadow: 0 4px 20px rgba(0,0,0,.08);';
-            resultBox.parentNode.insertBefore(historyWrapper, resultBox.nextSibling);
-        }
-
-        // ── PERBAIKAN DI SINI: Gunakan window.CARBON_STORAGE_KEY, jangan string statis 'carbon_history_list' ──
-        const currentKey = window.CARBON_STORAGE_KEY || 'carbon_history_guest';
-        const historyList = JSON.parse(localStorage.getItem(currentKey)) || [];
-
-        if (historyList.length === 0) {
-            historyWrapper.style.display = 'none';
-            return;
-        }
-
-        historyWrapper.style.display = 'block';
-    
-        let htmlContent = `
-            <h4 style="font-family: 'Manrope', sans-serif; font-weight: 800; color: #124170; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-history" style="color: #67C090;"></i> Riwayat Perhitungan Kalkulator Anda
-            </h4>
-            <div style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
-        `;
-
-        historyList.forEach((item, index) => {
-            const ton = (item.total_kg / 1000).toFixed(3);
-            htmlContent += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #f8f9fa; border-radius: 10px; border: 1px solid #dee2e6; font-size: .85rem;">
-                    <div>
-                        <span style="color: #6c757d; font-size: .72rem; display: block; font-weight: 600;">📋 Perhitungan #${historyList.length - index} — ${item.date}</span>
-                        <strong style="color: #124170; font-size: .95rem;">${ton} ton CO₂e</strong> 
-                        <span style="color: #495057; font-size: .8rem; margin-left: 10px;">(Estimasi: ${item.biaya})</span>
-                    </div>
-                    <div style="text-align: right;">
-                        <span style="font-size: .75rem; background: rgba(38,102,127,.1); color: #26667F; padding: 3px 8px; border-radius: 20px; font-weight: 700;">
-                            📍 ${item.proyek}
-                        </span>
-                    </div>
-                </div>
-            `;
-        });
-
-        htmlContent += `</div>`;
-        
-        htmlContent += `
-            <button type="button" data-clear-carbon-history style="background: none; border: none; color: #e74c3c; font-size: .75rem; font-weight: 700; cursor: pointer; margin-top: 12px; padding: 0; display: flex; align-items: center; gap: 4px;">
-                Hapus Semua Riwayat Lokal
-            </button>
-        `;
-
-        historyWrapper.innerHTML = htmlContent;
-    }
+    renderHistoryContainer();
 });
 
 document.addEventListener('click', function(event) {

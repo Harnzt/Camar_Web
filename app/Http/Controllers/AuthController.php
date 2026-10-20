@@ -240,6 +240,12 @@ class AuthController extends Controller
             // Sehingga produk yang ditambahkan sebelum login tidak hilang.
             //app(CartController::class)->mergeSessionCart();
 
+            // Hapus session intended jika mengarah ke /dashboard umum agar seller/admin diarahkan ke dashboard masing-masing
+            $intended = $request->session()->get('url.intended');
+            if ($intended && in_array(parse_url($intended, PHP_URL_PATH), ['/dashboard', '/dashboard/'], true)) {
+                $request->session()->forget('url.intended');
+            }
+
             return redirect()->intended(match (Auth::user()->role) {
                 'admin', 'auditor', 'super_admin' => route('admin.dashboard'),
                 'seller' => route('seller.dashboard'),
