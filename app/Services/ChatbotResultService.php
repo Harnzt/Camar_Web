@@ -12,7 +12,8 @@ class ChatbotResultService
 {
     public function __construct(
         private readonly CarbonCalculationService $calculationService,
-        private readonly ProjectRecommendationService $recommendationService
+        private readonly ProjectRecommendationService $recommendationService,
+        private readonly ProjectPurchaseDisclosureService $purchaseDisclosureService
     ) {}
 
     public function process(User $user, array $data): array
@@ -46,7 +47,8 @@ class ChatbotResultService
             ]);
 
             $recommendations = $this->formatRecommendations(
-                $this->recommendationService->recommend($user, $calculation, 3)
+                $this->recommendationService->recommend($user, $calculation, 3),
+                max(1, (int) ceil($totalTon))
             );
 
             return [
@@ -79,21 +81,36 @@ class ChatbotResultService
             'calculation_id' => $calculation?->id,
             'total_kg' => $calculation ? round((float) $calculation->total_kg, 2) : null,
             'recommendations' => $this->formatRecommendations(
-                $this->recommendationService->recommend($user, $calculation, 3)
+                $this->recommendationService->recommend($user, $calculation, 3),
+                max(1, (int) ceil(((float) ($calculation?->total_kg ?? 0)) / 1000))
             ),
         ];
     }
 
-    private function formatRecommendations(Collection $projects): array
+    private function formatRecommendations(Collection $projects, int $requiredTon = 1): array
     {
         return $projects
             ->map(fn ($project) => [
                 'id' => $project->id,
                 'name' => $project->name,
+                'company_name' => $project->company_name,
+                'category' => $project->category,
                 'location' => $project->location,
                 'price_per_ton' => (float) $project->price_per_ton,
+                'stock_available' => (int) $project->stock_available,
+                'standard' => $project->standard,
+                'verified_year' => $project->verified_year,
                 'score' => $project->recommendation_score,
                 'reasons' => $project->recommendation_reasons,
+                'recommendation_breakdown' => $project->recommendation_breakdown,
+                'dominant_scope' => $project->dominant_scope,
+                'recommendation_mode' => $project->recommendation_mode,
+                'required_ton' => $requiredTon,
+                'total_offset_cost' => $requiredTon * (float) $project->price_per_ton,
+                'purchase_disclosure' => $this->purchaseDisclosureService->forProject(
+                    $project,
+                    $requiredTon
+                ),
                 'url' => route('projects.show', $project->id),
             ])
             ->values()

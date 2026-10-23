@@ -94,7 +94,7 @@
   ────────────────────────────────────────── */
   function initStickyCard() {
     // 1. Cek apakah tombol beli bawaan utama ada di halaman
-    // Jika tidak ada (karena user adalah Seller atau belum login), langsung batalkan fungsi ini
+    // Jika tidak ada, pengguna belum dapat melakukan pembelian.
     const mainCartBtn = $('#addToCartBtn');
     if (!mainCartBtn) return; 
 

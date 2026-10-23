@@ -6,7 +6,6 @@ use App\Http\Controllers\Api\EmissionCalculationController;
 use App\Http\Controllers\Api\HomeController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProjectController;
-use App\Http\Controllers\Api\SellerDashboardController;
 use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\ChatbotController;
 use Illuminate\Support\Facades\Route;
@@ -41,13 +40,5 @@ Route::prefix('v1')->group(function () {
             Route::delete('/calculations', [CalculatorController::class, 'clear']);
         });
 
-        Route::middleware('role:seller')->group(function () {
-            Route::get('/seller/dashboard', SellerDashboardController::class);
-            Route::get('/seller/projects', [SellerDashboardController::class, 'projects']);
-            Route::post('/seller/projects', [SellerDashboardController::class, 'store']);
-            Route::put('/seller/projects/{project}', [SellerDashboardController::class, 'update']);
-            Route::delete('/seller/projects/{project}', [SellerDashboardController::class, 'destroy']);
-            Route::get('/seller/transactions', [SellerDashboardController::class, 'transactions']);
-        });
     });
 });
