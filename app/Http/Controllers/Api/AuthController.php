@@ -7,9 +7,7 @@ use App\Models\DocumentVerification;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -17,13 +15,8 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'role' => ['required', 'in:buyer,seller'],
-            'account_category' => [
-                'required',
-                Rule::in($request->input('role') === 'seller'
-                    ? ['company']
-                    : ['company', 'personal']),
-            ],
+            'role' => ['required', 'in:buyer'],
+            'account_category' => ['required', 'in:company,personal'],
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'confirm_password' => ['required', 'same:password'],
@@ -40,10 +33,6 @@ class AuthController extends Controller
             'documents.akta' => ['nullable', 'string', 'max:255'],
             'documents.nib' => ['nullable', 'string', 'max:255'],
             'documents.iso' => ['nullable', 'string', 'max:255'],
-            'documents.gold_standard' => ['nullable', 'string', 'max:255'],
-            'documents.vcs' => ['nullable', 'string', 'max:255'],
-        ], [
-            'account_category.in' => 'Seller hanya dapat mendaftar sebagai perusahaan.',
         ]);
 
         if ($validated['account_category'] === 'personal') {
@@ -64,17 +53,6 @@ class AuthController extends Controller
                 'documents.akta' => ['required', 'string', 'max:255'],
                 'documents.nib' => ['required', 'string', 'max:255'],
             ])->validate();
-        }
-
-        if ($validated['role'] === 'seller') {
-            $hasGold = filled(Arr::get($validated, 'documents.gold_standard'));
-            $hasVcs = filled(Arr::get($validated, 'documents.vcs'));
-
-            if (! $hasGold && ! $hasVcs) {
-                throw ValidationException::withMessages([
-                    'documents.gold_standard' => ['Seller wajib upload minimal 1 sertifikat (Gold Standard atau VCS).'],
-                ]);
-            }
         }
 
         $documents = collect($validated['documents'] ?? [])
@@ -134,6 +112,12 @@ class AuthController extends Controller
         if ($user->isSuspended()) {
             return response()->json([
                 'message' => 'Akun Anda sedang dinonaktifkan. Hubungi administrator.',
+            ], 403);
+        }
+
+        if ($user->isSeller()) {
+            return response()->json([
+                'message' => 'Akun seller tidak lagi dapat digunakan untuk login. Silakan hubungi admin.',
             ], 403);
         }
 

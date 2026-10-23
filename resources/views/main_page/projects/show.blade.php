@@ -131,43 +131,7 @@
                     <div class="price-note">Termasuk sertifikat &amp; biaya registry</div>
                 </div>
 
-                {{-- KONDISIONAL: Jika user adalah SELLER, Kotak Detail Proyek disisipkan di Kolom Kanan --}}
-                @if(Auth::check() && Auth::user()->role === 'seller')
-                    <div class="tabs-wrapper right-tabs" style="margin-top: 16px; margin-bottom: 20px;">
-                        <div class="tabs-nav">
-                            <button class="tab-btn active" data-tab="deskripsi">Deskripsi</button>
-                            <button class="tab-btn" data-tab="metodologi">Metodologi</button>
-                            <button class="tab-btn" data-tab="dampak">Dampak</button>
-                            <button class="tab-btn" data-tab="location">Lokasi</button>
-                        </div>
-                        
-                        <div class="tabs-content">
-                            <div class="tab-pane active" id="deskripsi">
-                                <h3>Tentang Proyek</h3>
-                                <p>{!! nl2br(e($project->description)) !!}</p>
-                            </div>
-                            
-                            <div class="tab-pane" id="metodologi">
-                                <h3>Standar & Verifikasi</h3>
-                                <p>{{ $project->methodology ?? 'Proyek ini diverifikasi menggunakan standar komoditas karbon nasional dengan transparansi penuh.' }}</p>
-                            </div>
-                            
-                            <div class="tab-pane" id="dampak">
-                                <h3>Kontribusi Keberlanjutan</h3>
-                                <p>Mereduksi emisi CO₂e sekaligus mengalokasikan pendanaan langsung untuk pemberdayaan masyarakat sekitar tapak proyek.</p>
-                            </div>
-                            <div class="tab-pane" id="location">
-                                <p class="project-location">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; stroke: var(--green-600); vertical-align: middle; margin-right: 4px;">
-                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                        <circle cx="12" cy="10" r="3"/>
-                                    </svg>
-                                    {{ $project->location ?? 'Indonesia' }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+
 
                 {{-- HANYA AKUN BUYER YANG DAPAT MELIHAT SELECTION JUMLAH & TOMBOL AKSI BELI --}}
                 @if(Auth::check() && Auth::user()->role === 'buyer')
@@ -215,11 +179,9 @@
                 @else
                     {{-- TAMPILAN INFORMASI UNTUK SELLER ATAU TAMU --}}
                     <div class="info-only-block" style="margin-top: 10px; padding: 15px; background: #f8f9fa; border: 1px dashed #ced4da; border-radius: var(--radius-lg); text-align: center;">
-                        @if(Auth::check() && Auth::user()->role === 'seller')
-                            <p style="margin:0; font-size:14px; color:#5a6b5c;">ℹ️ Anda masuk sebagai <strong>Penjual (Seller)</strong>. Fitur transaksi pembelian dinonaktifkan untuk akun toko.</p>
-                        @else
+
                             <p style="margin:0; font-size:14px; color:#5a6b5c;">🔑 Silakan <a href="{{ route('login') }}" style="color:#0066cc; text-decoration:underline; font-weight:600;">Login sebagai Buyer</a> untuk melakukan pembelian kredit karbon.</p>
-                        @endif
+
                     </div>
                 @endif
             </div>

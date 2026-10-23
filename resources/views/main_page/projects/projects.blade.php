@@ -38,16 +38,6 @@
                     Dukung proyek reforestasi, energi bersih, dan konservasi di seluruh Indonesia.
                 </p>
 
-                @auth
-                    @if(Auth::user()->isSeller())
-                        <div class="hero-seller-actions">
-                            <a href="{{ route('seller.projects.create') }}" class="btn-add-project">
-                                + Tambah Proyek Baru
-                            </a>
-                        </div>
-                    @endif
-                @endauth
-
             </div>
         </div>
     </section>
@@ -222,101 +212,25 @@
                 @endif
             @endif
 
-            {{-- SELLER ONLY: BAGIAN 1 - PROYEK SAYA SENDIRI --}}
-            @if(Auth::user()->isSeller())
-                <section class="seller-own-projects-section mb-5">
-                    <div class="recommended-header">
-                        <h2 class="recommended-title" style="color: #28a745;"><i class="fas fa-folder-open"></i> Portofolio Proyek Saya</h2>
-                        <p class="recommended-subtitle">Daftar seluruh proyek mitigasi karbon yang Anda terbitkan dan kelola di pasar CAMAR.</p>
-                    </div>
-                    
-                    <div class="row g-4">
-                        @php $hasOwnProject = false; @endphp
-                        @foreach($projects as $project)
-                            @if($project->seller_id === Auth::user()->id)
-                                @php $hasOwnProject = true; @endphp
-                                <div class="col-md-6 col-lg-4">
-                                    <div class="project-card" style="border: 2px solid #28a745;">
-                                        <div class="project-image project-card__image">
-                                            <img src="{{ $project->image ? asset('images/' . $project->image) : asset('images/placeholder-project.jpg') }}" alt="{{ $project->name }}">
-                                        </div>
-                                        <div class="project-card__body">
-                                            <div class="project-card__category">{{ $project->category }}</div>
-                                            <h3 class="project-card__title">{{ $project->name }}</h3>
-                                            <p class="project-card__company">{{ $project->company_name }}</p>
-                                            <p class="project-card__description">{{ Str::limit($project->description, 100) }}</p>
-                                            <div class="project-duration-wrapper">
-                                                <span class="duration-icon">📅</span>
-                                                <span class="project-duration">{{ $project->duration_months }} Bulan</span>
-                                            </div>
-                                            <div class="project-card__meta">
-                                                <span class="project-card__price">Rp {{ number_format($project->price_per_ton, 0, ',', '.') }} / ton</span>
-                                                <span class="project-card__capacity">Stok: {{ number_format($project->stock_available) }} ton</span>
-                                            </div>
-                                        </div>
-                                        <div class="project-card__footer">
-                                            <a href="{{ route('seller.dashboard') }}#kelola-{{ $project->id }}" class="btn-action btn-action--manage">
-                                                Kelola Proyek
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-                        @endforeach
-
-                        @if(!$hasOwnProject)
-                            <div class="col-12 text-center py-4 text-muted">
-                                <p>Anda belum menerbitkan proyek apa pun. Klik "+ Tambah Proyek Baru" untuk meluncurkan proyek Anda.</p>
-                            </div>
-                        @endif
-                    </div>
-                </section>
-                <hr style="margin: 3rem 0; border-color: #ddd;">
-            @endif
         @endauth
 
 
         {{-- ===================================================== --}}
         {{-- SECTION: KATALOG PROYEK UTAMA                      --}}
-        {{-- (Untuk Guest & Buyer: Melihat Semua. Untuk Seller: Melihat Milik Orang Lain) --}}
+        {{-- Katalog proyek terverifikasi untuk pengunjung dan buyer. --}}
         {{-- ===================================================== --}}
         <section class="projects-grid-section all-projects-section">
             <div class="recommended-header">
                 <h2 class="recommended-title">
-                    @auth
-                        @if(Auth::user()->isSeller())
-                            <i class="fas fa-chart-line"></i> Eksplorasi Proyek Pasar 
-                        @else
-                            Semua Proyek Carbon Offset
-                        @endif
-                    @else
-                        Semua Proyek Carbon Offset
-                    @endauth
+                    Semua Proyek Carbon Offset
                 </h2>
                 <p class="recommended-subtitle">
-                    @auth
-                        @if(Auth::user()->isSeller())
-                            Pantau pergerakan harga, stok ketersediaan, dan kategori proyek carbon milik seller lain di seluruh Indonesia.
-                        @else
-                            Jelajahi seluruh proyek verified carbon offset aktif untuk menyeimbangkan emisi karbon Anda.
-                        @endif
-                    @else
-                        Jelajahi seluruh proyek verified carbon offset aktif untuk menyeimbangkan emisi karbon Anda.
-                    @endauth
+                    Jelajahi seluruh proyek verified carbon offset aktif untuk menyeimbangkan emisi karbon Anda.
                 </p>
             </div>
 
             <div class="projects-grid row g-4" id="projects-grid">
-                @php $hasMarketProject = false; @endphp
                 @forelse($projects as $project)
-                    {{-- JIKA USER ADALAH SELLER, JANGAN TAMPILKAN PROYEK MILIKNYA SENDIRI DI SINI --}}
-                    @auth
-                        @if(Auth::user()->isSeller() && $project->seller_id === Auth::user()->id)
-                            @continue
-                        @endif
-                    @endauth
-
-                    @php $hasMarketProject = true; @endphp
                     <div class="col-md-6 col-lg-4" data-project-id="{{ $project->id }}">
                         <div class="project-card">
                             
@@ -327,7 +241,7 @@
                             <div class="project-card__body">
                                 <div class="project-card__category">{{ $project->category }}</div>
                                 
-                                <div class="project-card__company">{{ $project->company_name ?? 'Seller' }}</div>
+                                <div class="project-card__company">{{ $project->company_name ?? 'CAMAR' }}</div>
                                 
                                 <h3 class="project-card__title" line-clamp-2>{{ $project->name }}</h3>
                                 <!-- <p class="project-company">{{ $project->company_name }}</p> -->
@@ -360,27 +274,17 @@
                                 @auth
                                     @if(Auth::user()->isBuyer())
                                         <a href="{{ route('projects.show', $project->id) }}" class="btn-action btn-action--primary">Pilih Paket</a>
-                                    @elseif(Auth::user()->isSeller())
-                                        <a href="{{ route('projects.show', $project->id) }}" class="btn-action btn-action--view">Lihat Detail Proyek</a>
+
                                     @endif
                                 @endauth
                             </div>
                         </div>
                     </div>
                 @empty
-                    @if(!$hasMarketProject)
-                        <div class="col-12 text-center py-5">
-                            <div class="projects-empty"><p>Belum ada proyek lain yang tersedia saat ini.</p></div>
-                        </div>
-                    @endif
-                @endforelse
-
-                {{-- Fallback teks jika semua proyek adalah milik seller itu sendiri sehingga list bawah kosong --}}
-                @if(!$hasMarketProject)
                     <div class="col-12 text-center py-5">
-                        <div class="projects-empty"><p>Belum ada proyek milik penjual lain di pasar.</p></div>
+                        <div class="projects-empty"><p>Belum ada proyek yang tersedia saat ini.</p></div>
                     </div>
-                @endif
+                @endforelse
 
             </div>
         </section>

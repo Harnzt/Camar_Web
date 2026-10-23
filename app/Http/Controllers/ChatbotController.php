@@ -93,7 +93,7 @@ class ChatbotController extends Controller
                     throw new \UnexpectedValueException('Format respons Rasa tidak valid.');
                 }
 
-                $responseData = $this->completeResponses($messages, $user);
+                $responseData = $this->completeResponses($messages, $user, $userMessage);
                 $replyText = collect($responseData)->pluck('text')->filter()->join("\n\n");
 
                 return response()->json([

@@ -731,7 +731,7 @@ function calcPersonalAll() {
     let energy_rt = 0;
     rowPairs('p_energy_fuel','p_energy_qty').forEach(([fuel, qty]) => {
         const ef = getFuelEF(fuel);
-        if (ef) energy_rt += qty * 12 * ef.ef;
+        if (ef) energy_rt += qty * ef.ef;
     });
 
     // Kendaraan (jarak monthly × 12)
@@ -740,12 +740,12 @@ function calcPersonalAll() {
         const vEF = EF_DB.vehicle[type];
         if (vEF) {
             const efVal = vEF[fuel] !== undefined ? vEF[fuel] : (vEF.ron88 || 0);
-            vehicle += km * 12 * efVal;
+            vehicle += km * efVal;
         }
     });
 
     // Listrik (monthly kWh × 12 × 0.8099)
-    const electricity = v('p_elec_kwh') * 12 * EF_DB.grid.household.ef;
+    const electricity = v('p_elec_kwh') * EF_DB.grid.household.ef;
 
     // Transportasi umum, ojol, dan pesawat
     let transit = 0;
@@ -838,6 +838,92 @@ function calcCompanyAll() {
     return { stat, mobile, elec, flight, hotel, train };
 }
 
+// Simpan rincian aktivitas yang membentuk setiap subtotal agar hasil di database
+// bisa ditelusuri kembali sampai ke jenis sumber dan jumlah aktivitasnya.
+function buildScopeDetails(mode) {
+    const scopes = { scope1: [], scope2: [], scope3: [] };
+    const add = (scope, source, activity, quantity, unit, factor, emission) => {
+        if (!(quantity > 0) || !(emission >= 0)) return;
+        scopes[scope].push({ source, activity, quantity, unit, emission_factor: factor, value_kg: emission });
+    };
+    const num = (el) => parseFloat(el?.value) || 0;
+    const selectText = (el) => el?.selectedOptions?.[0]?.textContent?.trim() || el?.value || '';
+
+    if (mode === 'personal') {
+        document.querySelectorAll('[data-group="p_energy"]').forEach(row => {
+            const fuel = row.querySelector('[name="p_energy_fuel[]"]')?.value;
+            const qty = num(row.querySelector('[name="p_energy_qty[]"]'));
+            const ef = getFuelEF(fuel);
+            if (ef) add('scope1', 'Energi rumah tangga', selectText(row.querySelector('[name="p_energy_fuel[]"]')), qty, `${ef.unit.split('/').pop()}`, ef.ef, qty * ef.ef);
+        });
+        document.querySelectorAll('[data-group="p_vehicle"]').forEach(row => {
+            const typeEl = row.querySelector('[name="p_vehicle_type[]"]');
+            const fuelEl = row.querySelector('[name="p_vehicle_fuel[]"]');
+            const type = typeEl?.value, fuel = fuelEl?.value, km = num(row.querySelector('[name="p_vehicle_km[]"]')) ;
+            const factor = EF_DB.vehicle[type]?.[fuel];
+            if (factor !== undefined) add('scope1', selectText(typeEl), `Bahan bakar: ${selectText(fuelEl)}`, km, factor, km * factor);
+        });
+        const kwh = num(document.getElementById('p_elec_kwh'));
+        add('scope2', 'Listrik rumah tangga (Grid Jawa-Bali)', 'Listrik', kwh, 'kWh/bulan', EF_DB.grid.household.ef, kwh * EF_DB.grid.household.ef);
+        document.querySelectorAll('[data-group="p_transit"]').forEach(row => {
+            const modeEl = row.querySelector('[name="p_transit_mode[]"]');
+            const modeValue = modeEl?.value;
+            const pax = num(row.querySelector('[name="p_transit_pax[]"]'));
+            const km = num(row.querySelector('[name="p_transit_km[]"]'));
+            const classEl = row.querySelector('[name="p_transit_class[]"]');
+            const ef = getTransitEF(modeValue === 'plane' ? (classEl?.value || 'economy') : modeValue);
+            const annualKm = km * pax * (modeValue === 'plane' ? 1 : 12);
+            if (ef) add('scope3', 'Transportasi', `${selectText(modeEl)}${modeValue === 'plane' ? ` (${selectText(classEl)})` : ''}`, annualKm, 'penumpang-km / bulan', ef.ef, annualKm * ef.ef);
+        });
+        document.querySelectorAll('[data-group="p_food"]').forEach(row => {
+            const typeEl = row.querySelector('[name="p_food_type[]"]'), qty = num(row.querySelector('[name="p_food_kg[]"]')) * 12;
+            const ef = getFoodEF(typeEl?.value);
+            if (ef) add('scope3', 'Konsumsi makanan', selectText(typeEl), qty, 'kg / bulan', ef.ef, qty * ef.ef);
+        });
+        const water = num(document.getElementById('p_water_m3'));
+        add('scope3', 'Penggunaan air', 'Air', water, 'm³ / bulan', EF_DB.water.ef, water * EF_DB.water.ef);
+        const waste = num(document.getElementById('p_waste_kg'));
+        add('scope3', 'Pengelolaan limbah', 'Sampah', waste, 'kg / bulan', EF_DB.waste.ef, waste * EF_DB.waste.ef);
+    } else {
+        document.querySelectorAll('[data-group="c_stat"]').forEach(row => {
+            const fuelEl = row.querySelector('[name="c_stat_fuel[]"]'), qty = num(row.querySelector('[name="c_stat_qty[]"]'));
+            const ef = getFuelEF(fuelEl?.value);
+            if (ef) add('scope1', 'Pembakaran stasioner', selectText(fuelEl), qty, `${ef.unit.split('/').pop()} / bulan`, ef.ef, qty * ef.ef);
+        });
+        document.querySelectorAll('[data-group="c_mobile_fuel"]').forEach(row => {
+            const fuelEl = row.querySelector('[name="c_mobile_fuel_type[]"]'), qty = num(row.querySelector('[name="c_mobile_fuel_qty[]"]'));
+            const ef = getFuelEF(fuelEl?.value);
+            if (ef) add('scope1', 'Kendaraan operasional (berdasarkan BBM)', selectText(fuelEl), qty, `${ef.unit.split('/').pop()} / bulan`, ef.ef, qty * ef.ef);
+        });
+        document.querySelectorAll('[data-group="c_mobile_dist"]').forEach(row => {
+            const fuelEl = row.querySelector('[name="c_mobile_dist_fuel[]"]'), km = num(row.querySelector('[name="c_mobile_dist_km[]"]'));
+            const fuel = fuelEl?.value;
+            const ef = ['solar_cn53','solar_cn51','solar_cn48','diesel'].includes(fuel) ? .270 : (['ron98','ron92','ron90','ron88'].includes(fuel) ? .210 : 0);
+            if (ef) add('scope1', 'Kendaraan operasional (berdasarkan jarak)', selectText(fuelEl), km, 'km / bulan', ef, km * ef);
+        });
+        document.querySelectorAll('[data-group="c_elec"]').forEach(row => {
+            const srcEl = row.querySelector('[name="c_elec_src[]"]'), qty = num(row.querySelector('[name="c_elec_kwh[]"]'));
+            const ef = getGridEF(srcEl?.value);
+            if (ef) add('scope2', 'Konsumsi listrik', selectText(srcEl), qty, 'kWh / bulan', ef.ef, qty * ef.ef);
+        });
+        document.querySelectorAll('[data-group="c_flight"]').forEach(row => {
+            const clsEl = row.querySelector('[name="c_flight_class[]"]'), pax = num(row.querySelector('[name="c_flight_pax[]"]')), km = num(row.querySelector('[name="c_flight_km[]"]'));
+            const ef = EF_DB.transit[clsEl?.value];
+            if (ef) add('scope3', 'Penerbangan dinas', `${selectText(clsEl)}; ${pax} penumpang`, km * pax, 'penumpang-km / bulan', ef.ef, km * pax * ef.ef);
+        });
+        document.querySelectorAll('[data-group="c_hotel"]').forEach(row => {
+            const nights = num(row.querySelector('[name="c_hotel_nights[]"]')), rooms = num(row.querySelector('[name="c_hotel_rooms[]"]')), qty = nights * rooms;
+            add('scope3', 'Akomodasi hotel', `${rooms} kamar × ${nights} malam`, qty, 'kamar-malam / bulan', EF_DB.hotel.ef, qty * EF_DB.hotel.ef);
+        });
+        document.querySelectorAll('[data-group="c_train"]').forEach(row => {
+            const clsEl = row.querySelector('[name="c_train_class[]"]'), km = num(row.querySelector('[name="c_train_km[]"]'));
+            const ef = getTrainEF(clsEl?.value);
+            if (ef) add('scope3', 'Perjalanan kereta', selectText(clsEl), km, 'penumpang-km / bulan', ef.ef, km * ef.ef);
+        });
+    }
+    return scopes;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN CALCULATE BUTTONS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -869,7 +955,8 @@ function calcCompanyAll() {
             window.currentCalculationData = {
                 mode: mode,
                 total_kg: totalKg,
-                details: details
+                details: details,
+                scope_details: buildScopeDetails(mode)
             };
             renderCompanyResult(details, totalKg);
             switchTab('c', 4, 4);
@@ -880,7 +967,8 @@ function calcCompanyAll() {
         window.currentCalculationData = {
             mode: mode,
             total_kg: totalKg,
-            details: details
+            details: details,
+            scope_details: buildScopeDetails(mode)
         };
 
         renderPersonalResult(details, totalKg);
@@ -1180,9 +1268,9 @@ window.saveCalculationToDatabase = function(e) {
             mode: 'personal',
             total_kg: totalKg,
             details: {
-                electricity: v('p_elec_kwh') * 12 * EF_DB.grid.household.ef,
-                water: v('p_water_m3') * 12 * EF_DB.water.ef,
-                waste: v('p_waste_kg') * 12 * EF_DB.waste.ef
+                electricity: v('p_elec_kwh') * EF_DB.grid.household.ef,
+                water: v('p_water_m3') * EF_DB.water.ef,
+                waste: v('p_waste_kg') * EF_DB.waste.ef
             }
         };
     }

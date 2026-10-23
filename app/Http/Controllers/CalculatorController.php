@@ -76,6 +76,28 @@ class CalculatorController extends Controller
                 'total_kg' => ['required', 'numeric', 'min:0.0001'],
                 'details' => ['required', 'array'],
                 'details.*' => ['nullable', 'numeric', 'min:0'],
+                'scope_details' => ['nullable', 'array'],
+                'scope_details.scope1' => ['nullable', 'array'],
+                'scope_details.scope2' => ['nullable', 'array'],
+                'scope_details.scope3' => ['nullable', 'array'],
+                'scope_details.scope1.*.source' => ['required_with:scope_details.scope1.*', 'string', 'max:150'],
+                'scope_details.scope1.*.activity' => ['required_with:scope_details.scope1.*', 'string', 'max:255'],
+                'scope_details.scope1.*.quantity' => ['required_with:scope_details.scope1.*', 'numeric', 'min:0'],
+                'scope_details.scope1.*.unit' => ['required_with:scope_details.scope1.*', 'string', 'max:80'],
+                'scope_details.scope1.*.emission_factor' => ['required_with:scope_details.scope1.*', 'numeric', 'min:0'],
+                'scope_details.scope1.*.value_kg' => ['required_with:scope_details.scope1.*', 'numeric', 'min:0'],
+                'scope_details.scope2.*.source' => ['required_with:scope_details.scope2.*', 'string', 'max:150'],
+                'scope_details.scope2.*.activity' => ['required_with:scope_details.scope2.*', 'string', 'max:255'],
+                'scope_details.scope2.*.quantity' => ['required_with:scope_details.scope2.*', 'numeric', 'min:0'],
+                'scope_details.scope2.*.unit' => ['required_with:scope_details.scope2.*', 'string', 'max:80'],
+                'scope_details.scope2.*.emission_factor' => ['required_with:scope_details.scope2.*', 'numeric', 'min:0'],
+                'scope_details.scope2.*.value_kg' => ['required_with:scope_details.scope2.*', 'numeric', 'min:0'],
+                'scope_details.scope3.*.source' => ['required_with:scope_details.scope3.*', 'string', 'max:150'],
+                'scope_details.scope3.*.activity' => ['required_with:scope_details.scope3.*', 'string', 'max:255'],
+                'scope_details.scope3.*.quantity' => ['required_with:scope_details.scope3.*', 'numeric', 'min:0'],
+                'scope_details.scope3.*.unit' => ['required_with:scope_details.scope3.*', 'string', 'max:80'],
+                'scope_details.scope3.*.emission_factor' => ['required_with:scope_details.scope3.*', 'numeric', 'min:0'],
+                'scope_details.scope3.*.value_kg' => ['required_with:scope_details.scope3.*', 'numeric', 'min:0'],
             ]);
 
             $mode = $validated['mode'] ?? 'personal';
@@ -120,6 +142,9 @@ class CalculatorController extends Controller
                     ],
                 ];
             }
+
+            // Rincian setiap aktivitas disimpan langsung sebagai JSON per scope.
+            $scopeDetails = $validated['scope_details'] ?? $scopeDetails;
 
             $totalKg = $scope1Kg + $scope2Kg + $scope3Kg;
             $hargaPerTon = 150000;

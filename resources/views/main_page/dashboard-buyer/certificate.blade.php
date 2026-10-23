@@ -206,7 +206,7 @@
                 <strong>{{ $order->project?->name ?? '-' }}</strong>
             </div>
             <div class="item">
-                <span>Penjual / Pengelola Proyek</span>
+                <span>Pengembang Proyek</span>
                 <strong>{{ $order->project?->seller?->name ?? $order->project?->company_name ?? '-' }}</strong>
             </div>
             <div class="item">

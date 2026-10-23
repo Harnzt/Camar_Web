@@ -325,8 +325,8 @@
                                 <div class="scope-modal-rows">
                                     @forelse($scopeDetails[$scope['key']] ?? [] as $detail)
                                         <div class="scope-modal-row">
-                                            <span>{{ $detail['label'] }}</span>
-                                            <strong>{{ number_format((float) $detail['value_kg'], 1) }} kg CO₂</strong>
+                                            <span>{{ $detail['label'] ?? 'Aktivitas' }}</span>
+                                            <strong>{{ number_format((float) ($detail['value_kg'] ?? 0), 1) }} kg CO₂</strong>
                                         </div>
                                     @empty
                                         <div class="scope-modal-row empty">
@@ -524,7 +524,7 @@
                         <div class="empty-icon"><i class="fas fa-seedling"></i></div>
                         <div>
                             <p>Belum ada proyek yang tersedia</p>
-                            <small>Proyek akan muncul di sini setelah seller menambahkan paket</small>
+                            <small>Proyek akan muncul di sini setelah admin menambahkan paket</small>
                         </div>
                     </div>
                 @endif

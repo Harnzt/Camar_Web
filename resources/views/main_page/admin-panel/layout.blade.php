@@ -30,7 +30,7 @@
             @endif
             @if(Auth::user()->hasPermission('projects.verify'))
                 <a href="{{ route('admin.projects.index') }}" class="{{ request()->routeIs('admin.projects.*') ? 'active' : '' }}">
-                    <i class="fas fa-seedling"></i><span>Verifikasi Proyek</span>
+                    <i class="fas fa-seedling"></i><span>Kelola Proyek</span>
                 </a>
             @endif
             @if(Auth::user()->hasPermission('transactions.manage') || Auth::user()->hasPermission('certificates.issue'))
@@ -81,6 +81,9 @@
         <div class="admin-content">
             @if(session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
+            @endif
+            @if(session('error'))
+                <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
             @if($errors->any())
                 <div class="alert alert-danger">

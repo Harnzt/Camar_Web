@@ -54,7 +54,7 @@ function loadEmissionData() {
 }
 
 // ====================================
-// 3. LIVE SEARCH (Portofolio & Kompetitor)
+// 3. LIVE SEARCH
 // ====================================
 function initializeLiveSearch() {
     const searchInput = document.getElementById('search-input');
@@ -62,7 +62,7 @@ function initializeLiveSearch() {
     if (searchInput) {
         searchInput.addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase();
-            const allProjectCards = document.querySelectorAll('.seller-own-projects-section .row > div, #projects-grid > div');
+            const allProjectCards = document.querySelectorAll('#projects-grid > div');
            
             allProjectCards.forEach(cardContainer => {
                 if (cardContainer.classList.contains('col-12')) return;
@@ -86,7 +86,7 @@ function initializeLiveSearch() {
 }
 
 // ====================================
-// 4. LIVE SORT (DOM Sorting untuk Kedua Section)
+// 4. LIVE SORT
 // ====================================
 function initializeLiveSort() {
     const sortSelect = document.getElementById('sort-select');
@@ -94,18 +94,15 @@ function initializeLiveSort() {
     
     if (sortSelect) {
         const marketGrid = document.getElementById('projects-grid');
-        const ownGrid = document.querySelector('.seller-own-projects-section .row');
-        // Simpan urutan asli masing-masing section
+        // Simpan urutan asli katalog proyek.
         const originalMarketOrder = marketGrid ? Array.from(marketGrid.children) : [];
-        const originalOwnOrder = ownGrid ? Array.from(ownGrid.children) : [];
 
         sortSelect.addEventListener('change', function(e) {
             const sortBy = e.target.value;
             
-            // Jika kembali ke 'relevant', kembalikan ke urutan asli database
+            // Jika kembali ke 'relevant', kembalikan ke urutan asli database.
             if (sortBy === 'relevant') {
                 if (marketGrid) originalMarketOrder.forEach(node => marketGrid.appendChild(node));
-                if (ownGrid) originalOwnOrder.forEach(node => ownGrid.appendChild(node));
                 return;
             }
 
@@ -142,9 +139,8 @@ function initializeLiveSort() {
                 cardsArray.forEach(node => container.appendChild(node));
             };
 
-            // Eksekusi sortir ke kedua area grid secara adil
+            // Sortir katalog utama.
             sortGridElements(marketGrid);
-            sortGridElements(ownGrid);
         });
     }
 }
