@@ -158,3 +158,75 @@ test('recommendation explanation request is not intercepted as a new recommendat
 
     Http::assertSentCount(1);
 });
+
+test('Rasa carbon balance request is completed for the authenticated buyer', function () {
+    $buyer = informationBuyer();
+    config(['services.rasa.webhook_url' => 'http://rasa.test/webhooks/rest/webhook']);
+    Http::fake([
+        'http://rasa.test/*' => Http::response([[
+            'custom' => ['type' => 'carbon_balance_request'],
+        ]]),
+    ]);
+    $informationService = Mockery::mock(ChatbotInformationService::class);
+    $informationService->shouldReceive('answer')
+        ->once()
+        ->withArgs(fn (string $type, string $query, ?User $user) => $type === 'carbon_balance_request'
+            && $query === 'berapa sisa emisi saya'
+            && $user?->id === 77)
+        ->andReturn([
+            'text' => 'Sisa emisi akunmu 500 kg CO2e.',
+            'custom' => [
+                'type' => 'carbon_balance_result',
+                'total_kg' => 1500,
+                'offset_kg' => 1000,
+                'remaining_kg' => 500,
+                'required_ton' => 1,
+            ],
+        ]);
+    $this->app->instance(ChatbotInformationService::class, $informationService);
+
+    $this->actingAs($buyer)
+        ->postJson('/chatbot/send', ['message' => 'berapa sisa emisi saya'])
+        ->assertOk()
+        ->assertJsonPath('data.0.custom.type', 'carbon_balance_result')
+        ->assertJsonPath('data.0.custom.remaining_kg', 500)
+        ->assertJsonPath('data.0.custom.required_ton', 1);
+});
+
+test('Rasa purchase disclosure request is completed with checkout information', function () {
+    config(['services.rasa.webhook_url' => 'http://rasa.test/webhooks/rest/webhook']);
+    Http::fake([
+        'http://rasa.test/*' => Http::response([[
+            'custom' => [
+                'type' => 'purchase_disclosure_request',
+                'query' => 'cek biaya dan risiko proyek Mangrove Blue Carbon Riau',
+            ],
+        ]]),
+    ]);
+    $informationService = Mockery::mock(ChatbotInformationService::class);
+    $informationService->shouldReceive('answer')
+        ->once()
+        ->with(
+            'purchase_disclosure_request',
+            'cek biaya dan risiko proyek Mangrove Blue Carbon Riau',
+            null
+        )->andReturn([
+            'text' => 'Subtotal, PPN, total, risiko, dan ketentuan transaksi.',
+            'custom' => [
+                'type' => 'purchase_disclosure_result',
+                'purchase_disclosure' => [
+                    'subtotal' => 255000,
+                    'tax' => 28050,
+                    'estimated_total' => 283050,
+                ],
+            ],
+        ]);
+    $this->app->instance(ChatbotInformationService::class, $informationService);
+
+    $this->postJson('/chatbot/send', [
+        'message' => 'cek biaya dan risiko proyek Mangrove Blue Carbon Riau',
+    ])->assertOk()
+        ->assertJsonPath('data.0.custom.type', 'purchase_disclosure_result')
+        ->assertJsonPath('data.0.custom.purchase_disclosure.tax', 28050)
+        ->assertJsonPath('data.0.custom.purchase_disclosure.estimated_total', 283050);
+});
