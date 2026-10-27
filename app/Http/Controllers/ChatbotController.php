@@ -55,6 +55,21 @@ class ChatbotController extends Controller
             ]);
         }
 
+        if ($this->isOffsetSimulationRequest($userMessage)) {
+            $answer = $this->completeInformationRequest(
+                [],
+                ['type' => 'offset_simulation_request', 'query' => $userMessage],
+                $user,
+                $userMessage
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'reply' => $answer['text'] ?? '',
+                'data' => [$answer],
+            ]);
+        }
+
         if ($this->isRecommendationRequest($userMessage)) {
             $rec = $this->completeRecommendation(
                 ['custom' => ['type' => 'project_recommendation_request']],
@@ -93,12 +108,11 @@ class ChatbotController extends Controller
                     throw new \UnexpectedValueException('Format respons Rasa tidak valid.');
                 }
 
-                $responseData = $this->completeResponses($messages, $user);
-                $replyText = collect($responseData)->pluck('text')->filter()->join("\n\n");
+                $responseData = $this->completeResponses($messages, $user, $userMessage);
 
                 return response()->json([
                     'status' => 'success',
-                    'data' => $this->completeResponses($messages, $user, $userMessage),
+                    'data' => $responseData,
                 ]);
             }
 
@@ -152,6 +166,8 @@ class ChatbotController extends Controller
 
                 $informationTypes = [
                     'emission_explanation_request',
+                    'carbon_balance_request',
+                    'offset_simulation_request',
                     'project_information_request',
                     'project_verification_request',
                     'recommendation_explanation_request',
@@ -278,6 +294,17 @@ class ChatbotController extends Controller
             || (Str::contains($message, 'proyek') && Str::contains($message, [
                 'rekomendas', 'carikan', 'cocok', 'sesuai', 'saran', 'pilih', 'relevan',
             ]));
+    }
+
+    private function isOffsetSimulationRequest(string $message): bool
+    {
+        $message = Str::lower($message);
+
+        return Str::contains($message, [
+            'simulasi offset',
+            'simulasikan pembelian',
+            'simulasi beli',
+        ]);
     }
 
     private function activityAccountType(array $data): ?string

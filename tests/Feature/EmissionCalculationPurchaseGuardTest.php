@@ -119,6 +119,52 @@ test('kalkulator menyimpan rincian komponen untuk setiap scope', function () {
     expect((float) $calculation->scope1_kg)->toBe(100.0)
         ->and((float) $calculation->scope2_kg)->toBe(50.0)
         ->and((float) $calculation->scope3_kg)->toBe(75.0)
+        ->and((float) $calculation->household_energy_kg)->toBe(40.0)
+        ->and((float) $calculation->private_vehicle_kg)->toBe(60.0)
+        ->and((float) $calculation->electricity_kg)->toBe(50.0)
+        ->and((float) $calculation->public_transport_kg)->toBe(20.0)
+        ->and((float) $calculation->food_kg)->toBe(30.0)
+        ->and((float) $calculation->water_kg)->toBe(10.0)
+        ->and((float) $calculation->waste_kg)->toBe(15.0)
         ->and($calculation->scope_details['scope1'][0]['label'])->toBe('Energi rumah tangga')
         ->and((float) $calculation->scope_details['scope3'][3]['value_kg'])->toBe(15.0);
+});
+
+test('kalkulator menyimpan rincian transportasi dalam JSON dan emisi kategori dalam kolom', function () {
+    $buyer = createBuyerForPurchaseGuard();
+
+    $this->actingAs($buyer)
+        ->postJson('/calculator/store', [
+            'mode' => 'personal',
+            'total_kg' => 20,
+            'details' => [
+                'transit' => 20,
+            ],
+            'scope_details' => [
+                'scope3' => [[
+                    'source' => 'Transportasi',
+                    'activity' => 'Bus',
+                    'quantity' => 240,
+                    'unit' => 'penumpang-km/tahun',
+                    'emission_factor' => 0.089,
+                    'value_kg' => 20,
+                    'input_type' => 'bus',
+                    'transport_mode' => 'bus',
+                    'distance_km' => 20,
+                    'passengers' => 1,
+                ]],
+            ],
+        ])
+        ->assertOk()
+        ->assertJson(['success' => true]);
+
+    $calculation = EmissionCalculation::where('user_id', $buyer->id)
+        ->latest()
+        ->firstOrFail();
+
+    expect((float) $calculation->public_transport_kg)->toBe(20.0)
+        ->and($calculation->scope_details['scope3'][0]['transport_mode'])->toBe('bus')
+        ->and($calculation->scope_details['scope3'][0]['activity'])->toBe('Bus')
+        ->and((float) $calculation->scope_details['scope3'][0]['distance_km'])->toBe(20.0)
+        ->and((float) $calculation->scope_details['scope3'][0]['value_kg'])->toBe(20.0);
 });

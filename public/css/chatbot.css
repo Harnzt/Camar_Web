@@ -1,9 +1,12 @@
 :root {
-    --cami-green: #19764a;
-    --cami-green-dark: #105b38;
-    --cami-bg: #f4f7f5;
-    --cami-border: #dce6df;
-    --cami-text: #173229;
+    --cami-green: #26667f;
+    --cami-green-dark: #124170;
+    --cami-accent: #67c090;
+    --cami-mint: #ddf4e7;
+    --cami-bg: #f4f8f6;
+    --cami-border: #d7e6e1;
+    --cami-text: #1b1b18;
+    --cami-muted: #60736c;
 }
 
 .cami-hidden {
@@ -17,14 +20,14 @@
     z-index: 999998;
     display: flex;
     flex-direction: column;
-    width: min(420px, calc(100vw - 32px));
+    width: min(430px, calc(100vw - 32px));
     height: min(580px, calc(100vh - 130px));
     overflow: hidden;
     color: var(--cami-text);
     background: #fff;
     border: 1px solid var(--cami-border);
     border-radius: 18px;
-    box-shadow: 0 18px 50px rgba(16, 55, 38, 0.22);
+    box-shadow: 0 18px 50px rgba(18, 65, 112, 0.24);
     font-family: Manrope, Arial, sans-serif;
 }
 
@@ -32,9 +35,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    min-height: 72px;
     padding: 14px 16px;
     color: #fff;
-    background: var(--cami-green);
+    background: linear-gradient(135deg, var(--cami-green-dark), var(--cami-green));
 }
 
 #cami-header-avatar,
@@ -58,15 +62,16 @@
 }
 
 #cami-header-name {
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 800;
+    letter-spacing: -0.02em;
 }
 
 #cami-header-status {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11px;
+    font-size: 12px;
     opacity: 0.9;
     overflow: hidden;
     white-space: nowrap;
@@ -75,7 +80,7 @@
 .cami-dot-online {
     width: 7px;
     height: 7px;
-    background: #70efa8;
+    background: var(--cami-accent);
     border-radius: 50%;
 }
 
@@ -228,7 +233,7 @@
 #cami-history-messages {
     flex: 1;
     min-height: 0;
-    padding: 16px;
+    padding: 18px 18px 12px;
     overflow-y: auto;
     background: var(--cami-bg);
 }
@@ -237,7 +242,7 @@
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    margin-bottom: 13px;
+    margin-bottom: 14px;
 }
 
 .cami-msg-user {
@@ -252,7 +257,7 @@
 
 .cami-msg-bubble {
     max-width: 80%;
-    padding: 10px 13px;
+    padding: 12px 14px;
     font-size: 13px;
     line-height: 1.5;
     overflow-wrap: anywhere;
@@ -264,7 +269,7 @@
 
 .cami-msg-user .cami-msg-bubble {
     color: #fff;
-    background: var(--cami-green);
+    background: linear-gradient(135deg, var(--cami-green), var(--cami-green-dark));
     border-color: var(--cami-green);
     border-radius: 14px 14px 4px 14px;
 }
@@ -333,7 +338,7 @@
 
 #cami-input:focus {
     border-color: var(--cami-green);
-    box-shadow: 0 0 0 3px rgba(25, 118, 74, 0.12);
+    box-shadow: 0 0 0 3px rgba(38, 102, 127, 0.14);
 }
 
 #cami-send-btn {
@@ -365,8 +370,8 @@
 .cami-response-btn {
     padding: 7px 10px;
     color: var(--cami-green-dark);
-    background: #e8f5ee;
-    border: 1px solid #acd3bd;
+    background: var(--cami-mint);
+    border: 1px solid #a9d7bd;
     border-radius: 999px;
     cursor: pointer;
     font-size: 12px;
@@ -374,7 +379,7 @@
 }
 
 .cami-response-btn:hover {
-    background: #d7eddf;
+    background: #ccebd9;
 }
 
 .cami-response-btn:disabled {
@@ -451,8 +456,8 @@
     display: grid;
     gap: 3px;
     padding: 10px;
-    background: #f5fbf7;
-    border: 1px solid #cde5d7;
+    background: #f5faf8;
+    border: 1px solid #c9e2d5;
     border-radius: 10px;
 }
 
@@ -483,6 +488,93 @@
     font-weight: 700;
 }
 
+.cami-project-section-title {
+    margin-top: 5px;
+    color: var(--cami-green-dark);
+    font-size: 10px;
+}
+
+.cami-score-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.cami-score-breakdown span {
+    padding: 3px 5px;
+    color: var(--cami-green-dark);
+    background: var(--cami-mint);
+    border-radius: 5px;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.cami-purchase-disclosure {
+    margin-top: 6px;
+    padding: 7px;
+    color: var(--cami-text);
+    background: #fff;
+    border: 1px solid #c9e2d5;
+    border-radius: 8px;
+    font-size: 10px;
+}
+
+.cami-purchase-disclosure summary {
+    color: var(--cami-green-dark);
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.cami-disclosure-amounts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    margin-top: 7px;
+}
+
+.cami-disclosure-amounts span {
+    display: grid;
+    gap: 1px;
+    padding: 5px;
+    background: #f5faf8;
+    border-radius: 6px;
+}
+
+.cami-disclosure-amounts small,
+.cami-disclosure-note {
+    color: var(--cami-muted);
+    font-size: 8px;
+}
+
+.cami-disclosure-amounts strong {
+    font-size: 9px;
+}
+
+.cami-disclosure-list {
+    display: grid;
+    gap: 3px;
+    margin-top: 7px;
+}
+
+.cami-disclosure-list > strong {
+    color: var(--cami-green-dark);
+    font-size: 9px;
+}
+
+.cami-disclosure-list ul {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    padding-left: 14px;
+    list-style: disc;
+}
+
+.cami-disclosure-note {
+    display: block;
+    margin-top: 7px;
+    line-height: 1.35;
+}
+
 .cami-project-link {
     width: fit-content;
     margin-top: 4px;
@@ -498,6 +590,202 @@
     border-radius: 8px;
     margin-top: 6px;
     display: block;
+}
+
+.cami-welcome-bubble {
+    width: min(360px, 86%);
+    max-width: 86%;
+}
+
+.cami-welcome-copy {
+    display: grid;
+    gap: 3px;
+    white-space: normal;
+}
+
+.cami-welcome-copy strong {
+    color: var(--cami-green-dark);
+    font-size: 14px;
+}
+
+.cami-welcome-copy span {
+    color: var(--cami-muted);
+    font-size: 11px;
+}
+
+.cami-menu-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 11px;
+}
+
+.cami-menu-list .cami-menu-item {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    min-height: 62px;
+    padding: 8px;
+    text-align: left;
+    white-space: normal;
+    border-radius: 10px;
+}
+
+.cami-menu-item > i {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    color: #fff;
+    background: var(--cami-green);
+    border-radius: 8px;
+    font-size: 11px;
+}
+
+.cami-menu-item > span {
+    display: grid;
+    gap: 1px;
+}
+
+.cami-menu-item strong {
+    color: var(--cami-green-dark);
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.cami-menu-item small {
+    color: var(--cami-muted);
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.25;
+}
+
+.cami-balance-card,
+.cami-action-plan {
+    display: grid;
+    gap: 9px;
+    margin-top: 10px;
+    padding: 11px;
+    white-space: normal;
+    background: linear-gradient(145deg, #f4fbf7, var(--cami-mint));
+    border: 1px solid #b9ddc9;
+    border-radius: 11px;
+}
+
+.cami-balance-title,
+.cami-action-title {
+    color: var(--cami-green-dark);
+    font-size: 13px;
+}
+
+.cami-balance-numbers {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.cami-balance-number {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+    padding: 7px 5px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.cami-balance-number small {
+    color: var(--cami-muted);
+    font-size: 9px;
+}
+
+.cami-balance-number strong {
+    color: var(--cami-green-dark);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+
+.cami-balance-progress {
+    height: 8px;
+    overflow: hidden;
+    background: #d7e2e6;
+    border-radius: 999px;
+}
+
+.cami-balance-progress span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--cami-accent), var(--cami-green));
+    border-radius: inherit;
+}
+
+.cami-balance-note,
+.cami-project-detail {
+    color: var(--cami-muted);
+    font-size: 10px;
+}
+
+.cami-action-step {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.82);
+    border-radius: 9px;
+}
+
+.cami-action-rank {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    color: #fff;
+    background: var(--cami-green);
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.cami-action-copy {
+    display: grid;
+    gap: 2px;
+}
+
+.cami-action-copy strong {
+    color: var(--cami-green-dark);
+    font-size: 11px;
+}
+
+.cami-action-copy small {
+    color: var(--cami-muted);
+    font-size: 9px;
+    line-height: 1.35;
+}
+
+.cami-project-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 5px;
+}
+
+.cami-project-simulate,
+.cami-project-disclosure-btn {
+    padding: 5px 7px;
+    color: var(--cami-green-dark);
+    background: var(--cami-mint);
+    border: 1px solid #aad3bc;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.cami-project-simulate:disabled,
+.cami-project-disclosure-btn:disabled {
+    cursor: default;
+    opacity: 0.55;
 }
 
 #cami-send-btn i,
@@ -516,7 +804,7 @@
     border-radius: 50% !important;
     background: var(--cami-green);
     border: none;
-    box-shadow: 0 6px 18px rgba(26, 122, 76, 0.35);
+    box-shadow: 0 6px 18px rgba(18, 65, 112, 0.32);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -567,5 +855,9 @@
 @media (max-width: 380px) {
     #cami-history-btn span {
         display: none;
+    }
+
+    .cami-menu-list {
+        grid-template-columns: 1fr;
     }
 }

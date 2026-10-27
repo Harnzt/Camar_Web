@@ -14,7 +14,7 @@
 {{-- ================================================================
      KONDISI A - LOGIN SEBAGAI BUYER
      ================================================================ --}}
-@if(Auth::check() && (Auth::user()->isBuyer() || Auth::user()->isSeller()))
+@if(Auth::check() && Auth::user()->isBuyer())
     @if(Auth::user()->isBuyer())
     <section class="hero-section hero-user" id="home">
         <div class="hero-background">
@@ -172,7 +172,7 @@
                     <div class="col-12 text-center py-5">
                         <div class="projects-empty-state">
                             <i class="fas fa-seedling"></i>
-                            <p>Proyek belum tersedia. Seller sedang menambahkan paket baru.</p>
+                            <p>Proyek belum tersedia. Admin sedang menambahkan paket baru.</p>
                         </div>
                     </div>
                 @endforelse
@@ -245,242 +245,7 @@
 {{-- ================================================================
      KONDISI B — SELLER SUDAH LOGIN
      ================================================================ --}}
-    @elseif(Auth::user()->isSeller())
-
-    <section class="hero-section hero-seller" id="home">
-        <div class="hero-background">
-            <img src="{{ asset('images/landing.png') }}" alt="Background">
-            <div class="hero-seller-overlay"></div>
-        </div>
-        <div class="container">
-            <div class="hero-user-inner">
-
-                <div class="hero-user-left animate-fade-in">
-                    @if(($pendingCount ?? 0) > 0)
-                    <div class="floating-notif warning">
-                        <div class="notif-dot warning"></div>
-                        <span>
-                            <strong>{{ $pendingCount }} transaksi</strong> menunggu konfirmasi pembayaran
-                        </span>
-                        <a href="{{ route('seller.dashboard') }}">Tinjau →</a>
-                    </div>
-                    @endif
-
-                    <p class="hero-user-tag seller-tag">
-                        <i class="fas fa-store"></i> Seller Dashboard
-                    </p>
-                    <h1 class="hero-user-title">
-                        Halo, 
-                        <span class="hero-user-name">{{ $greetingName }}</span>!
-                        <span class="hero-seller-sub-title">{{ $activeProjects ?? 0 }} Proyek Aktif di Pasar</span>
-                    </h1>
-                    <p class="hero-user-sub">
-                        Pantau performa proyek karbon Anda dan maksimalkan dampak
-                        konservasi bersama buyer dari seluruh Indonesia.
-                    </p>
-                    <div class="hero-user-cta">
-                        <a href="{{ route('seller.dashboard') }}" class="btn-hero-primary seller">
-                            <i class="fas fa-tachometer-alt"></i> Lihat Laporan Penjualan
-                        </a>
-                        <a href="{{ route('seller.dashboard') }}#upload-proyek" class="btn-hero-secondary seller">
-                            <i class="fas fa-plus"></i> Update Kuota Karbon
-                        </a>
-                    </div>
-                </div>
-
-                <div class="hero-user-right animate-fade-in-delay">
-                    <div class="seller-snapshot">
-                        <div class="impact-snapshot-header">
-                            <span class="impact-snapshot-label">
-                                <i class="fas fa-chart-line"></i> Ringkasan Performa
-                            </span>
-                            <a href="{{ route('seller.dashboard') }}" class="impact-snapshot-more">Detail →</a>
-                        </div>
-
-                        <div class="seller-snap-numbers">
-                            <span class="seller-snap-val">{{ number_format($totalCarbonSold ?? 0, 1) }}</span>
-                            <span class="seller-snap-unit">ton CO₂ terjual</span>
-                        </div>
-
-                        <div class="seller-snap-grid">
-                            <div class="seller-snap-item">
-                                <i class="fas fa-seedling"></i>
-                                <span class="ssi-val">{{ $activeProjects ?? 0 }}</span>
-                                <span class="ssi-lbl">Proyek Aktif</span>
-                            </div>
-                            <div class="seller-snap-item">
-                                <i class="fas fa-boxes"></i>
-                                <span class="ssi-val">{{ number_format($totalStock ?? 0, 0) }}</span>
-                                <span class="ssi-lbl">Sisa Stok (ton)</span>
-                            </div>
-                            <div class="seller-snap-item">
-                                <i class="fas fa-wallet"></i>
-                                <span class="ssi-val">Rp {{ number_format(($totalRevenue ?? 0)/1e6, 1) }}jt</span>
-                                <span class="ssi-lbl">Total Pendapatan</span>
-                            </div>
-                            <div class="seller-snap-item {{ ($pendingCount ?? 0) > 0 ? 'alert' : '' }}">
-                                <i class="fas fa-bell"></i>
-                                <span class="ssi-val">{{ $pendingCount ?? 0 }}</span>
-                                <span class="ssi-lbl">Perlu Dikonfirmasi</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </section>
-
-    <section class="projects-section py-5" id="inventaris-seller"> 
-        <div class="container">
-        
-        <div class="row mb-4">
-            <div class="col-lg-8">
-                <span class="section-chip" style="margin-bottom: 0.55rem; display: inline-flex;"><i class="fas fa-layer-group"></i> Inventaris</span>
-                <h2 class="section-title text-start" style="margin-top: 0;">Proyek Anda di Marketplace</h2>
-            </div>
-        </div>
-
-        <div class="row g-4">
-            @forelse($sellerProjects ?? [] as $project)
-                <div class="col-md-6 col-lg-4">
-                    <div class="project-card">
-                        
-                        <div class="project-card__image">
-                            <img src="{{ $project->image ? asset('images/' . $project->image) : asset('images/placeholder-project.jpg') }}" alt="{{ $project->name }}">
-                            @if($project->stock_available < 10)
-                                <span class="stock-warning-badge">
-                                    <i class="fas fa-exclamation-triangle"></i> Stok Menipis
-                                </span>
-                            @endif
-                            @if($project->stock_available < 10)
-                                <span class="stock-warning-badge">
-                                    <i class="fas fa-exclamation-triangle"></i> Stok Menipis
-                                </span>
-                            @endif
-                        </div>
-
-                            <!-- <img src="{{ asset('images/' . $project->image) }}" alt="{{ $project->name }}"> -->
-                
-                        <div class="project-card__body">
-                            <div class="project-card__category">{{ $project->category }}</div>
-                            
-                            <h3 class="project-card__title">{{ $project->name }}</h3>
-                            
-                            <div class="project-card__company">{{ $project->company_name }}</div>
-                            
-                            <div class="project-location">
-                                <i class="fas fa-map-marker-alt"></i>
-                                {{ $project->location ?? '-' }}
-                            </div>
-                            
-                            <p class="project-card__description">{{ $project->description }}</p>
-                            
-                            <div class="project-card__meta">
-                                <div class="project-duration-wrapper">
-                                    <span class="duration-icon">📅</span>
-                                    <span class="project-duration">{{ $project->duration_months }} Bulan</span>
-                                </div>
-                                <span class="project-card__capacity">Stok: {{ number_format($project->stock_available) }} ton</span>
-                            </div>
-                            <div class="pcu-stats" style="margin-bottom: 0.875rem;">
-                                <div class="project-location">
-                                    <i class="fas fa-boxes"></i>
-                                    Stok: {{ $project->stock_available ? number_format($project->stock_available) . ' ton' : '-' }}
-                                </div>
-                            </div>
-                            
-                            <div class="project-card__meta">
-                                <span class="project-card__price">Rp {{ number_format($project->price_per_ton, 0, ',', '.') }} / ton</span>
-                            </div>
-                            
-                            <div class="project-card__footer">
-                                <a href="{{ route('seller.dashboard', $project->id) }}" class="btn-action btn-action--view">Kelola Proyek</a>
-                            </div>
-                        </div> 
-                    </div> 
-                </div>
-                
-            @empty
-                {{-- Tampilan kosong disesuaikan dengan grid Bootstrap --}}
-                <div class="col-12 text-center py-5">
-                    <div class="projects-empty-state">
-                        <i class="fas fa-seedling" style="font-size: 2.8rem; display: block; margin-bottom: 0.8rem; opacity: 0.4;"></i>
-                        <p>Belum ada proyek.</p> 
-                        <a href="{{ route('seller.dashboard') }}#upload-proyek" style="color: var(--color-teal); font-weight: 600; text-decoration: none;">
-                            <i class="fas fa-plus-circle"></i> Tambah proyek pertama
-                        </a>
-                    </div>
-                </div>
-            @endforelse
-        </div> {{-- Menutup .row g-4 --}}
-
-        {{-- Tombol Lihat Semua di Bagian Bawah --}}
-        <div class="row mt-5">
-            <div class="col-12 text-center">
-                <a href="{{ route('projects.index') }}" class="btn-view-all">
-                    Lihat Semua Proyek
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </a>
-            </div>
-        </div>
-
-        </div>
-    </section>
-
-    <section class="carbon-news-section">
-        <div class="container">
-            <div class="section-header-flex">
-                <div>
-                    <span class="section-chip dark"><i class="fas fa-chart-bar"></i> Market Insight</span>
-                    <h2 class="section-title">Tren Pasar Karbon Indonesia</h2>
-                    <p class="section-subtitle">Info terbaru untuk membantu Anda optimalkan proyek</p>
-                </div>
-                <a href="{{ route('edukasi') }}" class="btn-section-link">Semua Artikel →</a>
-            </div>
-            <div class="news-grid">
-                <div class="news-card featured-news">
-                    <div class="news-image">
-                        <picture>
-                            <source type="image/webp" srcset="{{ asset('images/mangrove0-960.webp') }} 960w, {{ asset('images/mangrove0-1920.webp') }} 1920w" sizes="(max-width: 991px) 100vw, 50vw">
-                            <img src="{{ asset('images/mangrove0.png') }}" alt="Insight pasar karbon Indonesia" width="2816" height="1536" loading="lazy" decoding="async">
-                        </picture>
-                        <span class="news-tag">Harga Karbon</span>
-                    </div>
-                    <div class="news-body">
-                        <h3>Harga Kredit Karbon IDX Carbon Menguat di 2024</h3>
-                        <p>Permintaan kredit karbon dari sektor manufaktur dan energi terus meningkat. Ini peluang bagi seller untuk memperluas kapasitas proyek.</p>
-                        <a href="{{ route('edukasi') }}" class="news-read-more">Baca Selengkapnya <i class="fas fa-arrow-right"></i></a>
-                    </div>
-                </div>
-                <div class="news-side">
-                    <div class="news-small">
-                        <span class="news-tag-sm">Tips Seller</span>
-                        <h4>Cara Meningkatkan Daya Tarik Proyek bagi Buyer</h4>
-                        <p>Lengkapi dokumen metodologi dan tambahkan foto lapangan untuk meningkatkan konversi penjualan hingga 3x.</p>
-                        <a href="{{ route('edukasi') }}" class="news-link">Baca →</a>
-                    </div>
-                    <div class="news-small">
-                        <span class="news-tag-sm">Regulasi</span>
-                        <h4>Update Perpres 98/2021: Kewajiban Seller di CAMAR</h4>
-                        <p>Panduan memenuhi persyaratan dokumen verifikasi sesuai regulasi terbaru pemerintah Indonesia.</p>
-                        <a href="{{ route('edukasi') }}" class="news-link">Baca →</a>
-                    </div>
-                    <div class="news-small">
-                        <span class="news-tag-sm">Sertifikasi</span>
-                        <h4>Verra VCS vs Gold Standard untuk Proyek Anda</h4>
-                        <p>Memilih standar sertifikasi yang tepat dapat meningkatkan nilai jual kredit karbon proyek mangrove.</p>
-                        <a href="{{ route('edukasi') }}" class="news-link">Baca →</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    @endif {{-- end buyer / seller --}}
+    @endif {{-- end buyer section --}}
 
 {{-- ================================================================
      KONDISI C — GUEST (BELUM LOGIN)
@@ -554,7 +319,7 @@
                         <div class="project-card__body">
                             <div class="project-card__category">{{ $item->category }}</div>
 
-                            <p class="project-card__company">{{ $item->company_name ?? 'Seller' }}</p>
+                            <p class="project-card__company">{{ $item->company_name ?? 'CAMAR' }}</p>
 
                             <h3 class="project-card__title" line-clamp-2>{{ $item->name ?? 'Nama Proyek' }}</h3>
 

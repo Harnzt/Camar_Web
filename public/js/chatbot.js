@@ -316,6 +316,94 @@ document.addEventListener('DOMContentLoaded', () => {
         if (offsetNeeded) offsetNeeded.textContent = (totalKg / 1000).toFixed(2);
     };
 
+    const appendBalanceNumber = (container, label, value) => {
+        const item = document.createElement('div');
+        item.className = 'cami-balance-number';
+        const caption = document.createElement('small');
+        caption.textContent = label;
+        const number = document.createElement('strong');
+        number.textContent = value;
+        item.append(caption, number);
+        container.appendChild(item);
+    };
+
+    const renderCarbonBalance = (bubble, result) => {
+        bubble.classList.add('cami-result-bubble');
+        const card = document.createElement('section');
+        card.className = 'cami-balance-card';
+
+        const title = document.createElement('strong');
+        title.className = 'cami-balance-title';
+        title.textContent = result.type === 'offset_simulation_result'
+            ? 'Ringkasan simulasi'
+            : 'Saldo karbon';
+        card.appendChild(title);
+
+        const numbers = document.createElement('div');
+        numbers.className = 'cami-balance-numbers';
+        if (result.type === 'offset_simulation_result') {
+            appendBalanceNumber(numbers, 'Sebelum', `${formatKg(result.remaining_before_kg)} kg`);
+            appendBalanceNumber(numbers, 'Rencana', `${Number(result.planned_ton).toLocaleString('id-ID')} ton`);
+            appendBalanceNumber(numbers, 'Sesudah', `${formatKg(result.remaining_after_kg)} kg`);
+        } else {
+            appendBalanceNumber(numbers, 'Total emisi', `${formatKg(result.total_kg)} kg`);
+            appendBalanceNumber(numbers, 'Sudah offset', `${formatKg(result.offset_kg)} kg`);
+            appendBalanceNumber(numbers, 'Sisa emisi', `${formatKg(result.remaining_kg)} kg`);
+        }
+        card.appendChild(numbers);
+
+        if (result.type === 'carbon_balance_result') {
+            const progress = document.createElement('div');
+            progress.className = 'cami-balance-progress';
+            const progressValue = document.createElement('span');
+            progressValue.style.width = `${Math.min(100, Math.max(0, Number(result.offset_percentage) || 0))}%`;
+            progress.appendChild(progressValue);
+            card.appendChild(progress);
+
+            const note = document.createElement('small');
+            note.className = 'cami-balance-note';
+            note.textContent = `${Number(result.offset_percentage || 0).toLocaleString('id-ID')}% tertutup · kebutuhan minimum ${Number(result.required_ton || 0).toLocaleString('id-ID')} ton`;
+            card.appendChild(note);
+        } else if (Number.isFinite(Number(result.estimated_total_cost))) {
+            const note = document.createElement('small');
+            note.className = 'cami-balance-note';
+            note.textContent = `Estimasi biaya ${formatRupiah(result.estimated_total_cost)} · belum membuat pesanan`;
+            card.appendChild(note);
+        }
+
+        bubble.appendChild(card);
+    };
+
+    const renderActionPlan = (bubble, result) => {
+        if (!Array.isArray(result.steps) || result.steps.length === 0) return;
+        bubble.classList.add('cami-result-bubble');
+        const plan = document.createElement('section');
+        plan.className = 'cami-action-plan';
+        const title = document.createElement('strong');
+        title.className = 'cami-action-title';
+        title.textContent = 'Prioritas Carbon Coach';
+        plan.appendChild(title);
+
+        result.steps.forEach((step, index) => {
+            const item = document.createElement('div');
+            item.className = 'cami-action-step';
+            const rank = document.createElement('span');
+            rank.className = 'cami-action-rank';
+            rank.textContent = String(step.rank || index + 1);
+            const copy = document.createElement('span');
+            copy.className = 'cami-action-copy';
+            const heading = document.createElement('strong');
+            heading.textContent = `${step.label || 'Aktivitas'} · ${formatKg(step.emission_kg || 0)} kg`;
+            const advice = document.createElement('small');
+            advice.textContent = step.advice || '';
+            copy.append(heading, advice);
+            item.append(rank, copy);
+            plan.appendChild(item);
+        });
+
+        bubble.appendChild(plan);
+    };
+
     const renderBotMessage = (message, recordId = null, restoring = false,
         allowButtons = true, container = messages) => {
         const text = typeof message?.text === 'string' ? message.text : '';
@@ -332,6 +420,14 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         if (result) renderCalculationResult(bubble, result, !restoring);
+
+        const customType = message?.custom?.type;
+        if (['carbon_balance_result', 'offset_simulation_result'].includes(customType)) {
+            renderCarbonBalance(bubble, message.custom);
+        }
+        if (customType === 'personal_action_plan_result') {
+            renderActionPlan(bubble, message.custom);
+        }
 
         if (message?.image && isSafeMediaUrl(message.image)) {
             const image = document.createElement('img');
@@ -416,6 +512,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.appendChild(category);
                 }
 
+                if (project.company_name) {
+                    const company = document.createElement('span');
+                    company.className = 'cami-project-meta';
+                    company.textContent = `Pengelola: ${project.company_name}`;
+                    card.appendChild(company);
+                }
+
+                const projectFacts = [
+                    project.standard ? `Standar: ${project.standard}${project.verified_year ? ` (${project.verified_year})` : ''}` : null,
+                    Number(project.duration_months) > 0 ? `Durasi: ${Number(project.duration_months).toLocaleString('id-ID')} bulan` : null,
+                    Number(project.area_ha) > 0 ? `Area: ${Number(project.area_ha).toLocaleString('id-ID')} ha` : null,
+                    Number(project.co2_per_year) > 0 ? `Dampak: ${Number(project.co2_per_year).toLocaleString('id-ID')} ton CO2e/tahun` : null,
+                    Number(project.families_impacted) > 0 ? `${Number(project.families_impacted).toLocaleString('id-ID')} keluarga terdampak` : null,
+                ].filter(Boolean);
+                if (projectFacts.length > 0) {
+                    const facts = document.createElement('small');
+                    facts.className = 'cami-project-detail';
+                    facts.textContent = projectFacts.join(' · ');
+                    card.appendChild(facts);
+                }
+
                 const price = Number(project.price_per_ton);
                 if (Number.isFinite(price)) {
                     const priceText = document.createElement('span');
@@ -442,6 +559,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.appendChild(offsetCost);
                 }
 
+                if (Number.isFinite(project.simulated_ton) && Number.isFinite(project.remaining_after_kg)) {
+                    const simulation = document.createElement('span');
+                    simulation.className = 'cami-project-price';
+                    simulation.textContent = `Sesudah ${project.simulated_ton} ton: sisa ${formatKg(project.remaining_after_kg)} kg CO2e`;
+                    card.appendChild(simulation);
+                }
+
                 if (Number.isFinite(project.purchased_ton) && Number.isFinite(project.purchase_count)) {
                     const soldText = document.createElement('span');
                     soldText.className = 'cami-project-meta';
@@ -450,10 +574,116 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (Array.isArray(project.reasons) && project.reasons.length > 0) {
+                    const reasonTitle = document.createElement('strong');
+                    reasonTitle.className = 'cami-project-section-title';
+                    reasonTitle.textContent = 'Mengapa proyek ini ditampilkan';
+                    card.appendChild(reasonTitle);
+
                     const reason = document.createElement('small');
                     reason.className = 'cami-project-reason';
-                    reason.textContent = project.reasons.slice(0, 2).join(' · ');
+                    reason.textContent = project.reasons.join(' · ');
                     card.appendChild(reason);
+                }
+
+                const scoreBreakdown = project.recommendation_breakdown;
+                if (scoreBreakdown && typeof scoreBreakdown === 'object') {
+                    const criteria = [
+                        ['Sumber emisi', scoreBreakdown.emission_match, 35],
+                        ['Harga', scoreBreakdown.budget_match, 25],
+                        ['Kecukupan stok', scoreBreakdown.stock_coverage, 20],
+                        ['Lokasi', scoreBreakdown.location_match, 10],
+                        ['Standar tercatat', scoreBreakdown.verification, 10],
+                    ].filter((item) => Number.isFinite(Number(item[1])));
+
+                    if (criteria.length > 0) {
+                        const breakdown = document.createElement('div');
+                        breakdown.className = 'cami-score-breakdown';
+                        criteria.forEach(([label, earned, maximum]) => {
+                            const criterion = document.createElement('span');
+                            criterion.textContent = `${label}: ${Number(earned).toLocaleString('id-ID')}/${maximum}`;
+                            breakdown.appendChild(criterion);
+                        });
+                        card.appendChild(breakdown);
+                    }
+                }
+
+                const disclosure = project.purchase_disclosure;
+                if (disclosure && typeof disclosure === 'object') {
+                    const details = document.createElement('details');
+                    details.className = 'cami-purchase-disclosure';
+
+                    const summary = document.createElement('summary');
+                    summary.textContent = 'Periksa biaya, risiko & ketentuan';
+                    details.appendChild(summary);
+
+                    const amountGrid = document.createElement('div');
+                    amountGrid.className = 'cami-disclosure-amounts';
+                    [
+                        ['Jumlah', `${Number(disclosure.quantity_ton || 1).toLocaleString('id-ID')} ton`],
+                        ['Subtotal', formatRupiah(Number(disclosure.subtotal || 0))],
+                        [`PPN ${Number(disclosure.tax_rate_percentage || 0).toLocaleString('id-ID')}%`, formatRupiah(Number(disclosure.tax || 0))],
+                        ['Biaya lain', formatRupiah(Number(disclosure.other_fees || 0))],
+                        ['Estimasi total', formatRupiah(Number(disclosure.estimated_total || 0))],
+                    ].forEach(([label, value]) => {
+                        const row = document.createElement('span');
+                        const key = document.createElement('small');
+                        const amount = document.createElement('strong');
+                        key.textContent = label;
+                        amount.textContent = value;
+                        row.append(key, amount);
+                        amountGrid.appendChild(row);
+                    });
+                    details.appendChild(amountGrid);
+
+                    const appendDisclosureList = (title, items) => {
+                        if (!Array.isArray(items) || items.length === 0) return;
+                        const block = document.createElement('div');
+                        block.className = 'cami-disclosure-list';
+                        const label = document.createElement('strong');
+                        label.textContent = title;
+                        const listElement = document.createElement('ul');
+                        items.forEach((item) => {
+                            const listItem = document.createElement('li');
+                            listItem.textContent = item;
+                            listElement.appendChild(listItem);
+                        });
+                        block.append(label, listElement);
+                        details.appendChild(block);
+                    };
+
+                    appendDisclosureList('Risiko yang perlu dipahami', disclosure.risks);
+                    appendDisclosureList('Ketentuan transaksi', disclosure.terms);
+
+                    const finalNote = document.createElement('small');
+                    finalNote.className = 'cami-disclosure-note';
+                    finalNote.textContent = 'Estimasi ini memakai data saat ini. Harga, stok, dan total final mengikuti halaman checkout.';
+                    details.appendChild(finalNote);
+                    card.appendChild(details);
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'cami-project-actions';
+
+                if (allowButtons) {
+                    const simulate = document.createElement('button');
+                    simulate.type = 'button';
+                    simulate.className = 'cami-project-simulate';
+                    simulate.textContent = 'Simulasi 1 ton';
+                    simulate.addEventListener('click', () => sendMessage(
+                        `simulasikan pembelian 1 ton proyek ${project.name}`,
+                        `Simulasi 1 ton · ${project.name}`
+                    ));
+                    actions.appendChild(simulate);
+
+                    const disclosureButton = document.createElement('button');
+                    disclosureButton.type = 'button';
+                    disclosureButton.className = 'cami-project-disclosure-btn';
+                    disclosureButton.textContent = 'Info sebelum beli';
+                    disclosureButton.addEventListener('click', () => sendMessage(
+                        `jelaskan biaya risiko dan ketentuan sebelum membeli proyek ${project.name}`,
+                        `Info sebelum beli · ${project.name}`
+                    ));
+                    actions.appendChild(disclosureButton);
                 }
 
                 if (project.url && isSafeMediaUrl(project.url)) {
@@ -462,9 +692,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     link.href = project.url;
                     link.target = '_blank';
                     link.rel = 'noopener noreferrer';
-                    link.textContent = 'Lihat proyek';
-                    card.appendChild(link);
+                    link.textContent = 'Tinjau & beli';
+                    actions.appendChild(link);
                 }
+
+                if (actions.childElementCount > 0) card.appendChild(actions);
 
                 list.appendChild(card);
             });
