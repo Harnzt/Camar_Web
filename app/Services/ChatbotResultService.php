@@ -33,6 +33,47 @@ class ChatbotResultService
         $totalTon = $result['total_kg'] / 1000;
 
         return DB::transaction(function () use ($user, $result, $totalTon, $pricePerTon): array {
+            $details = $result['details'];
+            $personalFlightKg = $result['mode'] === 'personal'
+                ? collect($result['scope_details']['scope3'] ?? [])
+                    ->filter(fn (array $item) => ($item['transport_mode'] ?? null) === 'plane'
+                        || str_starts_with((string) ($item['transport_mode'] ?? ''), 'flight_')
+                        || str_contains(strtolower((string) ($item['activity'] ?? '')), 'pesawat')
+                        || str_contains(strtolower((string) ($item['source'] ?? '')), 'penerbangan'))
+                    ->sum('value_kg')
+                : 0;
+            $categoryValues = $result['mode'] === 'company'
+                ? [
+                    'household_energy_kg' => 0,
+                    'private_vehicle_kg' => 0,
+                    'electricity_kg' => $details['elec'] ?? 0,
+                    'public_transport_kg' => 0,
+                    'personal_flight_kg' => 0,
+                    'food_kg' => 0,
+                    'water_kg' => 0,
+                    'waste_kg' => 0,
+                    'stationary_combustion_kg' => $details['stat'] ?? 0,
+                    'operational_vehicle_kg' => $details['mobile'] ?? 0,
+                    'business_flight_kg' => $details['flight'] ?? 0,
+                    'hotel_accommodation_kg' => $details['hotel'] ?? 0,
+                    'business_train_kg' => $details['train'] ?? 0,
+                ]
+                : [
+                    'household_energy_kg' => $details['energy_rt'] ?? 0,
+                    'private_vehicle_kg' => $details['vehicle'] ?? 0,
+                    'electricity_kg' => $details['electricity'] ?? 0,
+                    'public_transport_kg' => max(0, ($details['transit'] ?? 0) - $personalFlightKg),
+                    'personal_flight_kg' => ($details['flight'] ?? 0) + $personalFlightKg,
+                    'food_kg' => $details['food'] ?? 0,
+                    'water_kg' => $details['water'] ?? 0,
+                    'waste_kg' => $details['waste'] ?? 0,
+                    'stationary_combustion_kg' => 0,
+                    'operational_vehicle_kg' => 0,
+                    'business_flight_kg' => 0,
+                    'hotel_accommodation_kg' => 0,
+                    'business_train_kg' => 0,
+                ];
+
             $calculation = EmissionCalculation::create([
                 'user_id' => $user->id,
                 'calculation_mode' => $result['mode'],
@@ -40,6 +81,7 @@ class ChatbotResultService
                 'scope2_kg' => $result['scope2_kg'],
                 'scope3_kg' => $result['scope3_kg'],
                 'scope_details' => $result['scope_details'],
+                ...$categoryValues,
                 'total_kg' => $result['total_kg'],
                 'total_ton' => $totalTon,
                 'estimated_cost' => $totalTon * $pricePerTon,

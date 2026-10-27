@@ -842,9 +842,17 @@ function calcCompanyAll() {
 // bisa ditelusuri kembali sampai ke jenis sumber dan jumlah aktivitasnya.
 function buildScopeDetails(mode) {
     const scopes = { scope1: [], scope2: [], scope3: [] };
-    const add = (scope, source, activity, quantity, unit, factor, emission) => {
+    const add = (scope, source, activity, quantity, unit, factor, emission, attributes = {}) => {
         if (!(quantity > 0) || !(emission >= 0)) return;
-        scopes[scope].push({ source, activity, quantity, unit, emission_factor: factor, value_kg: emission });
+        scopes[scope].push({
+            source,
+            activity,
+            quantity,
+            unit,
+            emission_factor: factor,
+            value_kg: emission,
+            ...attributes
+        });
     };
     const num = (el) => parseFloat(el?.value) || 0;
     const selectText = (el) => el?.selectedOptions?.[0]?.textContent?.trim() || el?.value || '';
@@ -861,7 +869,7 @@ function buildScopeDetails(mode) {
             const fuelEl = row.querySelector('[name="p_vehicle_fuel[]"]');
             const type = typeEl?.value, fuel = fuelEl?.value, km = num(row.querySelector('[name="p_vehicle_km[]"]')) ;
             const factor = EF_DB.vehicle[type]?.[fuel];
-            if (factor !== undefined) add('scope1', selectText(typeEl), `Bahan bakar: ${selectText(fuelEl)}`, km, factor, km * factor);
+            if (factor !== undefined) add('scope1', selectText(typeEl), `Bahan bakar: ${selectText(fuelEl)}`, km, 'km / bulan', factor, km * factor);
         });
         const kwh = num(document.getElementById('p_elec_kwh'));
         add('scope2', 'Listrik rumah tangga (Grid Jawa-Bali)', 'Listrik', kwh, 'kWh/bulan', EF_DB.grid.household.ef, kwh * EF_DB.grid.household.ef);
@@ -873,7 +881,15 @@ function buildScopeDetails(mode) {
             const classEl = row.querySelector('[name="p_transit_class[]"]');
             const ef = getTransitEF(modeValue === 'plane' ? (classEl?.value || 'economy') : modeValue);
             const annualKm = km * pax * (modeValue === 'plane' ? 1 : 12);
-            if (ef) add('scope3', 'Transportasi', `${selectText(modeEl)}${modeValue === 'plane' ? ` (${selectText(classEl)})` : ''}`, annualKm, 'penumpang-km / bulan', ef.ef, annualKm * ef.ef);
+            if (ef) add('scope3', 'Transportasi', `${selectText(modeEl)}${modeValue === 'plane' ? ` (${selectText(classEl)})` : ''}`, annualKm, 'penumpang-km / tahun', ef.ef, annualKm * ef.ef, {
+                input_type: modeValue,
+                transport_mode: modeValue,
+                transport_class: modeValue === 'plane' ? classEl?.value || null : null,
+                distance_km: km,
+                origin: row.querySelector('[name="p_transit_origin[]"]')?.value || null,
+                destination: row.querySelector('[name="p_transit_destination[]"]')?.value || null,
+                passengers: pax
+            });
         });
         document.querySelectorAll('[data-group="p_food"]').forEach(row => {
             const typeEl = row.querySelector('[name="p_food_type[]"]'), qty = num(row.querySelector('[name="p_food_kg[]"]')) * 12;

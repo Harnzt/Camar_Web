@@ -5,15 +5,17 @@ use App\Models\Project;
 use App\Models\User;
 use App\Services\ChatbotInformationService;
 use App\Services\ProjectRecommendationService;
+use Illuminate\Support\Collection;
+use Tests\TestCase;
 
-uses(Tests\TestCase::class);
+uses(TestCase::class);
 
 function informationServiceWith(
     ?EmissionCalculation $emission,
     ?Project $project,
     float $offsetTon = 0,
     float $pendingTon = 0,
-    ?\Illuminate\Support\Collection $projects = null
+    ?Collection $projects = null
 ): ChatbotInformationService {
     return new class(app(ProjectRecommendationService::class), $emission, $project, $offsetTon, $pendingTon, $projects) extends ChatbotInformationService
     {
@@ -23,7 +25,7 @@ function informationServiceWith(
             private readonly ?Project $project,
             private readonly float $offsetTon,
             private readonly float $pendingTon,
-            private readonly ?\Illuminate\Support\Collection $projects
+            private readonly ?Collection $projects
         ) {
             parent::__construct($recommendationService);
         }
@@ -48,7 +50,7 @@ function informationServiceWith(
             return $this->pendingTon;
         }
 
-        protected function resolveProjects(string $query): \Illuminate\Support\Collection
+        protected function resolveProjects(string $query): Collection
         {
             return $this->projects ?? collect();
         }

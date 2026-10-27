@@ -99,32 +99,55 @@ class CarbonCalculationService
     private function calculatePersonal(array $data): array
     {
         $energyFuel = $this->choice($data, 'energy_fuel');
+        $energyFactor = $energyFuel === 'none' ? 0.0 : $this->factor(self::FUEL_FACTORS, $energyFuel);
         $energy = $energyFuel === 'none'
             ? 0.0
             : $this->number($data, 'energy_qty') * 12
-                * $this->factor(self::FUEL_FACTORS, $energyFuel);
+                * $energyFactor;
 
         $vehicleType = $this->choice($data, 'vehicle_type');
         $vehicleFuel = $this->choice($data, 'vehicle_fuel');
+        $vehicleFactor = $vehicleType === 'none'
+            ? 0.0
+            : $this->nestedFactor(self::VEHICLE_FACTORS, $vehicleType, $vehicleFuel);
         $vehicle = $vehicleType === 'none'
             ? 0.0
             : $this->number($data, 'vehicle_km') * 12
-                * $this->nestedFactor(self::VEHICLE_FACTORS, $vehicleType, $vehicleFuel);
+                * $vehicleFactor;
 
+        $electricityFactor = self::GRID_FACTORS['household'];
         $electricity = $this->number($data, 'electricity_kwh')
-            * 12 * self::GRID_FACTORS['household'];
+            * 12 * $electricityFactor;
 
         $transitMode = $this->choice($data, 'transit_mode');
+        $transitFactor = $transitMode === 'none'
+            ? 0.0
+            : $this->factor(self::TRANSIT_FACTORS, $transitMode);
         $transit = $transitMode === 'none'
             ? 0.0
             : $this->number($data, 'transit_km')
-                * $this->factor(self::TRANSIT_FACTORS, $transitMode);
+                * $transitFactor;
 
         $foodType = $this->choice($data, 'food_type');
+        $foodFactor = $foodType === 'none' ? 0.0 : $this->factor(self::FOOD_FACTORS, $foodType);
         $food = $foodType === 'none'
             ? 0.0
             : $this->number($data, 'food_kg') * 12
-                * $this->factor(self::FOOD_FACTORS, $foodType);
+                * $foodFactor;
+
+        $transitLabels = [
+            'flight_dom' => 'Pesawat domestik',
+            'flight_int_short' => 'Pesawat internasional jarak pendek',
+            'flight_int_long' => 'Pesawat internasional jarak jauh',
+            'train' => 'Kereta',
+            'bus' => 'Bus',
+        ];
+        $foodLabels = [
+            'beef' => 'Daging sapi',
+            'poultry' => 'Unggas',
+            'fish' => 'Ikan',
+            'veg' => 'Sayuran',
+        ];
 
         $details = [
             'energy_rt' => $energy,
@@ -138,17 +161,84 @@ class CarbonCalculationService
 
         return $this->result('personal', $details, [
             'scope1' => [
-                ['label' => 'Energi rumah tangga', 'value_kg' => $energy],
-                ['label' => 'Kendaraan pribadi', 'value_kg' => $vehicle],
+                [
+                    'label' => 'Energi rumah tangga',
+                    'source' => 'Energi rumah tangga',
+                    'activity' => $energyFuel,
+                    'input_type' => $energyFuel,
+                    'quantity' => $this->number($data, 'energy_qty'),
+                    'unit' => 'unit/bulan',
+                    'emission_factor' => $energyFactor,
+                    'value_kg' => $energy,
+                ],
+                [
+                    'label' => 'Kendaraan pribadi',
+                    'source' => 'Kendaraan pribadi',
+                    'activity' => $vehicleType,
+                    'input_type' => $vehicleType,
+                    'transport_mode' => $vehicleType,
+                    'transport_class' => $vehicleFuel,
+                    'quantity' => $this->number($data, 'vehicle_km'),
+                    'unit' => 'km/bulan',
+                    'emission_factor' => $vehicleFactor,
+                    'value_kg' => $vehicle,
+                ],
             ],
             'scope2' => [
-                ['label' => 'Konsumsi listrik', 'value_kg' => $electricity],
+                [
+                    'label' => 'Konsumsi listrik',
+                    'source' => 'Konsumsi listrik',
+                    'activity' => 'Listrik rumah tangga',
+                    'input_type' => 'electricity',
+                    'quantity' => $this->number($data, 'electricity_kwh'),
+                    'unit' => 'kWh/bulan',
+                    'emission_factor' => $electricityFactor,
+                    'value_kg' => $electricity,
+                ],
             ],
             'scope3' => [
-                ['label' => 'Transportasi umum', 'value_kg' => $transit],
-                ['label' => 'Konsumsi makanan', 'value_kg' => $food],
-                ['label' => 'Penggunaan air', 'value_kg' => $details['water']],
-                ['label' => 'Pengelolaan limbah', 'value_kg' => $details['waste']],
+                [
+                    'label' => 'Transportasi umum',
+                    'source' => 'Transportasi umum',
+                    'activity' => $transitLabels[$transitMode] ?? 'Transportasi umum',
+                    'input_type' => $transitMode,
+                    'transport_mode' => $transitMode,
+                    'distance_km' => $this->number($data, 'transit_km'),
+                    'quantity' => $this->number($data, 'transit_km'),
+                    'unit' => 'penumpang-km',
+                    'emission_factor' => $transitFactor,
+                    'value_kg' => $transit,
+                ],
+                [
+                    'label' => 'Konsumsi makanan',
+                    'source' => 'Konsumsi makanan',
+                    'activity' => $foodLabels[$foodType] ?? 'Konsumsi makanan',
+                    'input_type' => $foodType,
+                    'quantity' => $this->number($data, 'food_kg'),
+                    'unit' => 'kg/bulan',
+                    'emission_factor' => $foodFactor,
+                    'value_kg' => $food,
+                ],
+                [
+                    'label' => 'Penggunaan air',
+                    'source' => 'Penggunaan air',
+                    'activity' => 'Air',
+                    'input_type' => 'water',
+                    'quantity' => $this->number($data, 'water_m3'),
+                    'unit' => 'm3/bulan',
+                    'emission_factor' => self::WATER_FACTOR,
+                    'value_kg' => $details['water'],
+                ],
+                [
+                    'label' => 'Pengelolaan limbah',
+                    'source' => 'Pengelolaan limbah',
+                    'activity' => 'Sampah',
+                    'input_type' => 'waste',
+                    'quantity' => $this->number($data, 'waste_kg'),
+                    'unit' => 'kg/bulan',
+                    'emission_factor' => self::WASTE_FACTOR,
+                    'value_kg' => $details['waste'],
+                ],
             ],
         ]);
     }
@@ -219,26 +309,95 @@ class CarbonCalculationService
 
         return $this->result('company', $details, [
             'scope1' => [
-                ['label' => 'Pembakaran stasioner', 'value_kg' => $stationary],
-                ['label' => 'Kendaraan operasional', 'value_kg' => $mobile],
+                [
+                    'label' => 'Pembakaran stasioner',
+                    'source' => 'Pembakaran stasioner',
+                    'activity' => $stationaryFuel,
+                    'input_type' => $stationaryFuel,
+                    'quantity' => $this->number($data, 'stationary_qty'),
+                    'unit' => 'unit',
+                    'emission_factor' => $stationaryFuel === 'none' ? 0 : $this->factor(self::FUEL_FACTORS, $stationaryFuel),
+                    'value_kg' => $stationary,
+                ],
+                [
+                    'label' => 'Kendaraan operasional - BBM',
+                    'source' => 'Kendaraan operasional',
+                    'activity' => $mobileFuel,
+                    'input_type' => $mobileFuel,
+                    'quantity' => $this->number($data, 'mobile_fuel_qty'),
+                    'unit' => 'unit',
+                    'emission_factor' => $mobileFuel === 'none' ? 0 : $this->factor(self::FUEL_FACTORS, $mobileFuel),
+                    'value_kg' => $mobileFuelEmission,
+                ],
+                [
+                    'label' => 'Kendaraan operasional - jarak',
+                    'source' => 'Kendaraan operasional',
+                    'activity' => $distanceFuel,
+                    'input_type' => $distanceFuel,
+                    'transport_mode' => 'operational_vehicle',
+                    'distance_km' => $this->number($data, 'mobile_km'),
+                    'quantity' => $this->number($data, 'mobile_km'),
+                    'unit' => 'km',
+                    'emission_factor' => $distanceFactor,
+                    'value_kg' => $mobileDistanceEmission,
+                ],
             ],
             'scope2' => [
-                ['label' => 'Konsumsi listrik', 'value_kg' => $electricity],
+                [
+                    'label' => 'Konsumsi listrik',
+                    'source' => 'Konsumsi listrik',
+                    'activity' => $grid,
+                    'input_type' => $grid,
+                    'quantity' => $this->number($data, 'electricity_kwh'),
+                    'unit' => 'kWh',
+                    'emission_factor' => $grid === 'none' ? 0 : $this->factor(self::GRID_FACTORS, $grid),
+                    'value_kg' => $electricity,
+                ],
             ],
             'scope3' => [
                 [
                     'label' => $this->flightLabel($flightRoute),
+                    'source' => 'Penerbangan dinas',
+                    'activity' => $this->flightLabel($flightRoute),
+                    'input_type' => $flightClass,
                     'value_kg' => $flight,
                     'origin' => $flightRoute['origin'],
                     'origin_name' => $flightRoute['origin_name'],
                     'destination' => $flightRoute['destination'],
                     'destination_name' => $flightRoute['destination_name'],
                     'distance_km' => $flightDistance,
+                    'quantity' => $flightDistance * $this->number($data, 'flight_pax'),
+                    'unit' => 'penumpang-km',
+                    'emission_factor' => $flightClass === 'none' ? 0 : $this->factor(self::FLIGHT_FACTORS, $flightClass),
                     'pax' => $this->number($data, 'flight_pax'),
+                    'passengers' => $this->number($data, 'flight_pax'),
                     'cabin_class' => $flightClass,
+                    'transport_mode' => 'plane',
+                    'transport_class' => $flightClass,
                 ],
-                ['label' => 'Akomodasi hotel', 'value_kg' => $hotel],
-                ['label' => 'Perjalanan kereta', 'value_kg' => $train],
+                [
+                    'label' => 'Akomodasi hotel',
+                    'source' => 'Akomodasi hotel',
+                    'activity' => 'Kamar hotel',
+                    'input_type' => 'hotel',
+                    'quantity' => $this->number($data, 'hotel_nights') * $this->number($data, 'hotel_rooms'),
+                    'unit' => 'kamar-malam',
+                    'emission_factor' => self::HOTEL_FACTOR,
+                    'value_kg' => $hotel,
+                ],
+                [
+                    'label' => 'Perjalanan kereta',
+                    'source' => 'Perjalanan kereta',
+                    'activity' => $trainClass,
+                    'input_type' => $trainClass,
+                    'transport_mode' => 'train',
+                    'transport_class' => $trainClass,
+                    'distance_km' => $this->number($data, 'train_km'),
+                    'quantity' => $this->number($data, 'train_km'),
+                    'unit' => 'penumpang-km',
+                    'emission_factor' => $trainClass === 'none' ? 0 : $this->factor(self::TRAIN_FACTORS, $trainClass),
+                    'value_kg' => $train,
+                ],
             ],
         ]);
     }
