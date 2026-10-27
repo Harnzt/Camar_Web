@@ -10,49 +10,13 @@
  * 7. Progress bar updates correctly on back
  */
 
-let currentStep = 1;
+let currentStep = 2;
 let cropper = null;
-let selectedAccountType = null;
 let selectedCategoryType = null;
 let lastCropTrigger = null;
 
 // ====================================
-// STEP 1 — Account Role Selection
-// ====================================
-function selectRole(type, element) {
-    selectedAccountType = type;
-    document.getElementById('roleInput').value = type;
-
-    document.querySelectorAll('[data-step="1"] .account-card').forEach(card => {
-        card.classList.remove('selected');
-        card.setAttribute('aria-pressed', 'false');
-    });
-    element.classList.add('selected');
-    element.setAttribute('aria-pressed', 'true');
-
-    // Show/hide seller docs section
-    const sellerDocs = document.getElementById('sellerDocs');
-    sellerDocs.style.display = (type === 'seller') ? 'block' : 'none';
-
-    // Seller hanya dapat mendaftar sebagai perusahaan.
-    const companyOption = document.querySelector('[data-category-option="company"]');
-    const personalOption = document.querySelector('[data-category-option="personal"]');
-
-    if (personalOption) {
-        personalOption.hidden = (type === 'seller');
-    }
-
-    if (companyOption) {
-        companyOption.classList.toggle('seller-company-card', type === 'seller');
-    }
-
-    if (type === 'seller' && companyOption) {
-        selectCategory('company', companyOption);
-    }
-}
-
-// ====================================
-// STEP 2 — Account Category Selection
+// STEP 1 — Account Category Selection
 // ====================================
 function selectCategory(category, element) {
     selectedCategoryType = category;
@@ -113,12 +77,13 @@ function showStep(stepNumber) {
 // STEP INDICATORS
 // ====================================
 function updateStepIndicators(stepNumber) {
+    const visibleStep = stepNumber - 1;
     document.querySelectorAll('.step').forEach(indicator => {
         const s = parseInt(indicator.dataset.step);
         indicator.classList.remove('active', 'completed');
-        if (s < stepNumber) {
+        if (s < visibleStep) {
             indicator.classList.add('completed');
-        } else if (s === stepNumber) {
+        } else if (s === visibleStep) {
             indicator.classList.add('active');
         }
     });
@@ -129,7 +94,7 @@ function updateStepIndicators(stepNumber) {
 // ====================================
 function updateProgressBar(stepNumber) {
     const progressFill = document.getElementById('progressFill');
-    const progress = ((stepNumber - 1) / 5) * 100;
+    const progress = ((stepNumber - 2) / 4) * 100;
     progressFill.style.width = progress + '%';
 }
 
@@ -141,7 +106,7 @@ function updateButtons(stepNumber) {
     const nextBtn = document.getElementById('nextBtn');
     const submitBtn = document.getElementById('submitBtn');
 
-    prevBtn.style.setProperty('display', stepNumber === 1 ? 'none' : 'inline-flex', 'important');
+    prevBtn.style.setProperty('display', stepNumber === 2 ? 'none' : 'inline-flex', 'important');
 
     if (stepNumber === 6) {
         nextBtn.style.display = 'none';
@@ -163,7 +128,7 @@ function changeStep(direction) {
     currentStep += direction;
 
     // Clamp
-    if (currentStep < 1) currentStep = 1;
+    if (currentStep < 2) currentStep = 2;
     if (currentStep > 6) currentStep = 6;
 
     showStep(currentStep);
@@ -174,7 +139,6 @@ function changeStep(direction) {
 // ====================================
 function applyDocumentVisibility() {
     const companyDocs = document.querySelectorAll('.document-item.company-only');
-    const sellerDocsSection = document.getElementById('sellerDocs');
 
     if (selectedCategoryType === 'personal') {
         // Hide company-only document items and remove their required attr
@@ -196,10 +160,6 @@ function applyDocumentVisibility() {
         });
     }
 
-    // Show seller docs section only for seller role
-    if (sellerDocsSection) {
-        sellerDocsSection.style.display = (selectedAccountType === 'seller') ? 'block' : 'none';
-    }
 }
 
 // ====================================
@@ -207,13 +167,6 @@ function applyDocumentVisibility() {
 // ====================================
 function validateStep(step) {
     switch (step) {
-        case 1:
-            if (!selectedAccountType) {
-                showAlert('Pilih tipe akun terlebih dahulu');
-                return false;
-            }
-            return true;
-
         case 2:
             if (!selectedCategoryType) {
                 showAlert('Pilih jenis pengguna terlebih dahulu');
@@ -273,15 +226,6 @@ function validateStep(step) {
                 }
             }
 
-            // Validate seller: minimal 1 sertifikat
-            if (selectedAccountType === 'seller') {
-                const doc5 = document.getElementById('doc5').files.length;
-                const doc6 = document.getElementById('doc6').files.length;
-                if (doc5 === 0 && doc6 === 0) {
-                    showAlert('Seller harus upload minimal 1 sertifikat (Gold Standard atau VCS)');
-                    return false;
-                }
-            }
             return true;
         }
 
@@ -496,9 +440,7 @@ window.addEventListener('DOMContentLoaded', function () {
     `;
     document.head.appendChild(style);
 
-    document.querySelectorAll('[data-role-option]').forEach(button => {
-        button.addEventListener('click', () => selectRole(button.dataset.roleOption, button));
-    });
+    document.getElementById('roleInput').value = 'buyer';
 
     document.querySelectorAll('[data-category-option]').forEach(button => {
         button.addEventListener('click', () => selectCategory(button.dataset.categoryOption, button));
@@ -529,6 +471,5 @@ window.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Show step 1
-    showStep(1);
+    showStep(2);
 });

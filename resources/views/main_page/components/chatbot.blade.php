@@ -43,13 +43,40 @@
         <div id="cami-messages">
             <div class="cami-msg cami-msg-bot">
                 <img src="{{ asset('images/cami.png') }}" alt="Cami" class="cami-msg-avatar">
-                <div class="cami-msg-bubble">
-                    Halo! Aku Cami, asisten karbon CAMAR. Pilih menu atau tulis pertanyaanmu, misalnya "proyek apa yang paling murah?".
-                    <div class="cami-response-buttons">
-                        <button type="button" class="cami-response-btn" data-cami-payload="hitung emisi">Mulai kalkulator akun saya</button>
-                        <button type="button" class="cami-response-btn" data-cami-payload="/ask_project_recommendation">Rekomendasi proyek</button>
-                        <button type="button" class="cami-response-btn" data-cami-payload="apa itu emisi karbon">Tentang emisi karbon</button>
-                        <button type="button" class="cami-response-btn" data-cami-payload="apa itu carbon offset">Tentang carbon offset</button>
+                <div class="cami-msg-bubble cami-welcome-bubble">
+                    <div class="cami-welcome-copy">
+                        <strong>Apa yang ingin kamu lakukan?</strong>
+                        <span>Aku bisa menghitung, menjelaskan saldo emisi, dan membantu memilih proyek CAMAR.</span>
+                    </div>
+                    <div class="cami-menu-list">
+                        <button type="button" class="cami-response-btn cami-menu-item" data-cami-payload="hitung emisi">
+                            <i class="fa-solid fa-calculator" aria-hidden="true"></i>
+                            <span><strong>Hitung emisi</strong><small>Kalkulator sesuai tipe akun</small></span>
+                        </button>
+                        <button type="button" class="cami-response-btn cami-menu-item" data-cami-payload="berapa sisa emisi saya">
+                            <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                            <span><strong>Saldo karbon</strong><small>Emisi, offset, dan sisa saat ini</small></span>
+                        </button>
+                        <button type="button" class="cami-response-btn cami-menu-item" data-cami-payload="/ask_project_recommendation">
+                            <i class="fa-solid fa-seedling" aria-hidden="true"></i>
+                            <span><strong>Rekomendasi proyek</strong><small>Proyek sesuai profil emisi</small></span>
+                        </button>
+                        <button type="button" class="cami-response-btn cami-menu-item" data-cami-payload="simulasikan pembelian 1 ton kredit karbon">
+                            <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                            <span><strong>Simulasi offset</strong><small>Perkiraan biaya dan sisa emisi</small></span>
+                        </button>
+                        <button type="button" class="cami-response-btn cami-menu-item" data-cami-payload="bandingkan dua proyek karbon">
+                            <i class="fa-solid fa-code-compare" aria-hidden="true"></i>
+                            <span><strong>Bandingkan proyek</strong><small>Harga, stok, lokasi, dan dampak</small></span>
+                        </button>
+                        <button type="button" class="cami-response-btn cami-menu-item" data-cami-payload="buatkan rencana pengurangan emisi saya">
+                            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                            <span><strong>Carbon Coach</strong><small>Prioritas pengurangan personal</small></span>
+                        </button>
+                        <button type="button" class="cami-response-btn cami-menu-item" data-cami-payload="Cami bisa membantu apa saja">
+                            <i class="fa-solid fa-compass" aria-hidden="true"></i>
+                            <span><strong>Panduan CAMAR</strong><small>Cara memakai fitur website</small></span>
+                        </button>
                     </div>
                 </div>
             </div>

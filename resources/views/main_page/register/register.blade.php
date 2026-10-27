@@ -26,26 +26,22 @@
             </div>
             <div class="step active" data-step="1">
                 <div class="step-number">1</div>
-                <div class="step-label">Tipe Akun</div>
+                <div class="step-label">Jenis Pendaftar</div>
             </div>
             <div class="step" data-step="2">
                 <div class="step-number">2</div>
-                <div class="step-label">Tipe Pengguna</div>
+                <div class="step-label">Data Identitas</div>
             </div>
             <div class="step" data-step="3">
                 <div class="step-number">3</div>
-                <div class="step-label">Data Identitas</div>
+                <div class="step-label">Foto Profil</div>
             </div>
             <div class="step" data-step="4">
                 <div class="step-number">4</div>
-                <div class="step-label">Foto Profil</div>
+                <div class="step-label">Dokumen</div>
             </div>
             <div class="step" data-step="5">
                 <div class="step-number">5</div>
-                <div class="step-label">Dokumen</div>
-            </div>
-            <div class="step" data-step="6">
-                <div class="step-number">6</div>
                 <div class="step-label">Verifikasi</div>
             </div>
         </div>
@@ -53,47 +49,14 @@
         <!-- Registration Form -->
         <form id="registerForm" action="{{ route('register.process') }}" method="POST" enctype="multipart/form-data" novalidate>
             @csrf
-
-            <!-- ==================== -->
-            <!-- STEP 1: Tipe Akun   -->
-            <!-- ==================== -->
-            <div class="form-step" data-step="1">
-                <h2 class="step-title">Pilih Tipe Akun</h2>
-                <p class="step-subtitle">Pilih jenis akun yang sesuai dengan kebutuhan Anda</p>
-
-                <div class="account-types">
-                    <button type="button" class="account-card" data-role-option="buyer" aria-pressed="false">
-                        <div class="account-icon">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <h3>Buyer</h3>
-                        <p>Pihak yang ingin membeli kredit karbon untuk offset emisi</p>
-                        <div class="account-check">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                    </button>
-
-                    <button type="button" class="account-card" data-role-option="seller" aria-pressed="false">
-                        <div class="account-icon">
-                            <i class="fas fa-store"></i>
-                        </div>
-                        <h3>Seller</h3>
-                        <p>Penyedia proyek carbon offset yang ingin menjual kredit karbon</p>
-                        <div class="account-check">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                    </button>
-                </div>
-
-                <input type="hidden" id="roleInput" name="role" required>
-            </div>
+            <input type="hidden" id="roleInput" name="role" value="buyer">
 
             <!-- ========================== -->
-            <!-- STEP 2: Tipe Pengguna      -->
+            <!-- STEP 1: Tipe Pengguna      -->
             <!-- ========================== -->
             <div class="form-step" data-step="2">
-                <h2 class="step-title">Pilih Tipe Pengguna</h2>
-                <p class="step-subtitle">Pilih jenis pengguna yang sesuai dengan Anda</p>
+                <h2 class="step-title">Pilih Jenis Pendaftar</h2>
+                <p class="step-subtitle">Pilih apakah Anda mendaftar sebagai individu atau perusahaan</p>
 
                 <div class="account-types">
                     <button type="button" class="account-card" data-category-option="company" aria-pressed="false">
@@ -391,48 +354,6 @@
                     </div>
                 </div>
 
-                <!-- Dokumen Seller -->
-                <div class="documents-section seller-docs" id="sellerDocs" style="display:none;">
-                    <h3 class="doc-section-title">Dokumen Tambahan (Seller)</h3>
-                    <p class="doc-note">
-                        <i class="fas fa-info-circle"></i>
-                        Minimal upload 1 dari 2 dokumen sertifikasi berikut
-                    </p>
-
-                    <div class="document-item">
-                        <div class="doc-info">
-                            <i class="fas fa-certificate"></i>
-                            <div>
-                                <h4>Gold Standard Certification</h4>
-                                <p>Sertifikat Gold Standard</p>
-                            </div>
-                        </div>
-                        <div class="doc-upload">
-                            <input type="file" id="doc5" name="gold_standard" accept=".pdf,.jpg,.png">
-                            <label for="doc5" class="btn-upload-doc">
-                                <i class="fas fa-upload"></i> Upload
-                            </label>
-                            <span class="doc-badge seller">Seller</span>
-                        </div>
-                    </div>
-
-                    <div class="document-item">
-                        <div class="doc-info">
-                            <i class="fas fa-certificate"></i>
-                            <div>
-                                <h4>VCS Verification Report</h4>
-                                <p>Laporan Verifikasi VCS</p>
-                            </div>
-                        </div>
-                        <div class="doc-upload">
-                            <input type="file" id="doc6" name="vcs" accept=".pdf,.jpg,.png">
-                            <label for="doc6" class="btn-upload-doc">
-                                <i class="fas fa-upload"></i> Upload
-                            </label>
-                            <span class="doc-badge seller">Seller</span>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- ========================== -->

@@ -2,8 +2,6 @@
 
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
-use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\SellerDashboardController;
 
 define('LARAVEL_START', microtime(true));
 

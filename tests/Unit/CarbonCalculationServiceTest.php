@@ -4,8 +4,9 @@ use App\Models\User;
 use App\Services\CarbonCalculationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
 
-uses(Tests\TestCase::class);
+uses(TestCase::class);
 
 test('personal calculation covers household account scopes', function () {
     $user = new User(['account_category' => 'personal']);
@@ -29,7 +30,9 @@ test('personal calculation covers household account scopes', function () {
         ->and(round($result['scope1_kg'], 2))->toBe(1650.0)
         ->and(round($result['scope2_kg'], 2))->toBe(971.88)
         ->and(round($result['scope3_kg'], 2))->toBe(724.18)
-        ->and(round($result['total_kg'], 2))->toBe(3346.06);
+        ->and(round($result['total_kg'], 2))->toBe(3346.06)
+        ->and($result['scope_details']['scope3'][0]['transport_mode'])->toBe('train')
+        ->and($result['scope_details']['scope3'][0]['distance_km'])->toBe(100.0);
 });
 
 test('company calculation covers scope one two and three', function () {
@@ -66,7 +69,7 @@ test('company flight distance and emission match calculator route formula', func
         ->with('airports_data')
         ->andReturnTrue();
 
-    $query = \Mockery::mock();
+    $query = Mockery::mock();
     DB::shouldReceive('table')->once()->with('airports_data')->andReturn($query);
     $query->shouldReceive('select')
         ->once()

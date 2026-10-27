@@ -211,7 +211,7 @@
                     <i class="fas fa-chevron-down"></i>
                 </button>
                 <div class="faq-answer" id="faq-answer-2" hidden>
-                    <p>CAMAR menghubungkan pembeli (perusahaan) dengan penjual (pemilik proyek carbon offset). Platform kami menyediakan marketplace transparan dengan semua proyek terverifikasi internasional.</p>
+                    <p>CAMAR membantu pembeli menemukan proyek carbon offset terverifikasi yang dikelola langsung oleh tim admin platform.</p>
                 </div>
             </div>
 
