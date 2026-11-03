@@ -26,9 +26,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('emission_calculations', function (Blueprint $table) {
-            $table->json('scope_details')->nullable()->after('scope3_kg');
+            if (! Schema::hasColumn('emission_calculations', 'scope_details')) {
+                $table->json('scope_details')->nullable()->after('scope3_kg');
+            }
             foreach (self::CATEGORY_COLUMNS as $column) {
-                $table->decimal($column, 15, 4)->default(0);
+                if (! Schema::hasColumn('emission_calculations', $column)) {
+                    $table->decimal($column, 15, 4)->default(0);
+                }
             }
         });
 
@@ -97,7 +101,15 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('emission_calculations', function (Blueprint $table) {
-            $table->dropColumn(['scope_details', ...self::CATEGORY_COLUMNS]);
+            $columnsToDrop = [];
+            foreach (self::CATEGORY_COLUMNS as $column) {
+                if (Schema::hasColumn('emission_calculations', $column)) {
+                    $columnsToDrop[] = $column;
+                }
+            }
+            if (!empty($columnsToDrop)) {
+                $table->dropColumn($columnsToDrop);
+            }
         });
     }
 
