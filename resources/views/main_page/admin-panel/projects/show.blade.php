@@ -11,7 +11,7 @@
         <h2 class="detail-title">{{ $project->name }}</h2>
         <p class="muted">{{ $project->company_name }} · {{ $project->location }}</p>
         <dl class="detail-list">
-            <div><dt>Seller</dt><dd>{{ $project->seller?->name ?? '-' }}</dd></div>
+            <div><dt>Pengembang / Perusahaan</dt><dd>{{ $project->company_name }}</dd></div>
             <div><dt>Kategori</dt><dd>{{ $project->category }}</dd></div>
             <div><dt>Standar</dt><dd>{{ $project->standard ?? '-' }}</dd></div>
             <div><dt>Harga</dt><dd>{{ $project->price_formatted }}</dd></div>

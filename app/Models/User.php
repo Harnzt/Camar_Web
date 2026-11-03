@@ -214,14 +214,6 @@ class User extends Authenticatable
         return $this->emissionCalculations()->exists();
     }
 
-    /**
-     * User sebagai Seller memiliki banyak portofolio proyek carbon
-     */
-    public function projects(): HasMany
-    {
-        return $this->hasMany(Project::class, 'seller_id');
-    }
-
     public function documentVerifications(): HasMany
     {
         return $this->hasMany(DocumentVerification::class);

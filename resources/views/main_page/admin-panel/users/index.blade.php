@@ -10,7 +10,6 @@
         <select name="role">
             <option value="">Semua role</option>
             <option value="buyer" @selected(request('role') === 'buyer')>Buyer</option>
-            <option value="seller" @selected(request('role') === 'seller')>Seller</option>
         </select>
         <select name="status">
             <option value="">Semua status</option>

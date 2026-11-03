@@ -96,7 +96,7 @@
                                 <a class="dropdown-item py-2" href="{{
                                     Auth::user()->isAdministrator()
                                         ? route('admin.dashboard')
-                                        : (Auth::user()->isSeller() ? route('seller.dashboard') : route('dashboard'))
+                                        : route('dashboard')
                                 }}">
                                     <i class="fas fa-tachometer-alt me-2 text-success"></i> Dashboard
                                 </a>

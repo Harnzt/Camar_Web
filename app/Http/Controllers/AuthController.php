@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use App\Http\Controllers\CartController;
 use App\Models\DocumentVerification;
@@ -28,13 +27,8 @@ class AuthController extends Controller
         // 1. VALIDASI (semua pengguna)
         // ----------------------------------------------------------
         $commonRules = [
-            'role'             => 'required|in:buyer,seller',
-            'account_category' => [
-                'required',
-                Rule::in($request->input('role') === 'seller'
-                    ? ['company']
-                    : ['company', 'personal']),
-            ],
+            'role'             => 'required|in:buyer',
+            'account_category' => 'required|in:company,personal',
             'password'         => ['required', 'min:8'],
             'confirm_password' => 'required|same:password',
             'address'          => 'required|string|max:500',
@@ -71,36 +65,10 @@ class AuthController extends Controller
             ];
         }
 
-        // ----------------------------------------------------------
-        // 3. VALIDASI DOKUMEN — Seller
-        // ----------------------------------------------------------
         $role = $request->input('role');
 
-        $sellerRules = [];
-        if ($role === 'seller') {
-            $sellerRules = [
-                'gold_standard' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-                'vcs'           => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            ];
-        }
-
         // Gabungkan semua rules dan validasi
-        $request->validate(
-            array_merge($commonRules, $categoryRules, $sellerRules),
-            ['account_category.in' => 'Seller hanya dapat mendaftar sebagai perusahaan.'],
-        );
-
-        // Validasi seller: minimal 1 sertifikat
-        if ($role === 'seller') {
-            $hasGold = $request->hasFile('gold_standard') && $request->file('gold_standard')->isValid();
-            $hasVcs  = $request->hasFile('vcs') && $request->file('vcs')->isValid();
-
-            if (!$hasGold && !$hasVcs) {
-                return back()
-                    ->withInput()
-                    ->withErrors(['gold_standard' => 'Seller wajib upload minimal 1 sertifikat (Gold Standard atau VCS).']);
-            }
-        }
+        $request->validate(array_merge($commonRules, $categoryRules));
 
         // ----------------------------------------------------------
         // 4. SIMPAN USER
@@ -164,15 +132,6 @@ class AuthController extends Controller
             }
         }
 
-        // Seller-only documents
-        if ($role === 'seller') {
-            if ($request->hasFile('gold_standard')) {
-                $documents['gold_standard'] = $this->uploadDocument($request->file('gold_standard'), $user->id, 'gold_standard');
-            }
-            if ($request->hasFile('vcs')) {
-                $documents['vcs'] = $this->uploadDocument($request->file('vcs'), $user->id, 'vcs');
-            }
-        }
 
         // Simpan path dokumen sebagai JSON di kolom documents
         if (!empty($documents)) {
@@ -225,6 +184,16 @@ class AuthController extends Controller
                 ])->onlyInput('email');
             }
 
+            if (Auth::user()->isSeller()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return back()->withErrors([
+                    'loginError' => 'Akun seller tidak lagi dapat digunakan untuk login. Silakan hubungi admin.',
+                ])->onlyInput('email');
+            }
+
             if (Auth::user()->isAdministrator()) {
                 $loginLog = AdminLoginLog::create([
                     'admin_id' => Auth::id(),
@@ -240,7 +209,7 @@ class AuthController extends Controller
             // Sehingga produk yang ditambahkan sebelum login tidak hilang.
             //app(CartController::class)->mergeSessionCart();
 
-            // Hapus session intended jika mengarah ke /dashboard umum agar seller/admin diarahkan ke dashboard masing-masing
+            // Hapus intended dashboard path agar admin diarahkan ke panel administrasi.
             $intended = $request->session()->get('url.intended');
             if ($intended && in_array(parse_url($intended, PHP_URL_PATH), ['/dashboard', '/dashboard/'], true)) {
                 $request->session()->forget('url.intended');
@@ -248,7 +217,6 @@ class AuthController extends Controller
 
             return redirect()->intended(match (Auth::user()->role) {
                 'admin', 'auditor', 'super_admin' => route('admin.dashboard'),
-                'seller' => route('seller.dashboard'),
                 default => route('dashboard'),
             });
         }
