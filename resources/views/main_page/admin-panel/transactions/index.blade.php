@@ -50,7 +50,7 @@
                         </td>
                         <td>
                             <strong>{{ $order->project?->name ?? 'Proyek dihapus' }}</strong>
-                            <small>{{ $order->project?->seller?->name ?? 'Penjual tidak ditemukan' }}</small>
+                            <small>{{ $order->project?->company_name ?? 'CAMAR' }}</small>
                         </td>
                         <td>
                             <strong>{{ $order->buyer_name ?? $order->user?->name }}</strong>

@@ -29,7 +29,7 @@ class ProjectRecommendationService
             ->where('stock_available', '>', 0)
             ->get();
 
-        if (!$emission) {
+        if (! $emission) {
             return $this->initialRecommendations($user, $projects, $limit);
         }
 
@@ -42,7 +42,7 @@ class ProjectRecommendationService
 
     private function initialRecommendations(User $user, Collection $projects, int $limit): Collection
     {
-        if (!$user->isCompany() || blank($user->industry)) {
+        if (! $user->isCompany() || blank($user->industry)) {
             return $projects
                 ->shuffle()
                 ->take($limit)
@@ -158,7 +158,7 @@ class ProjectRecommendationService
 
     private function dominantScope(?EmissionCalculation $emission): string
     {
-        if (!$emission) {
+        if (! $emission) {
             return 'general';
         }
 
@@ -239,7 +239,7 @@ class ProjectRecommendationService
 
     private function locationMatchScore(Project $project, User $user): float
     {
-        if (!$user->address || !$project->location) {
+        if (! $user->address || ! $project->location) {
             return 5.0;
         }
 
@@ -260,7 +260,7 @@ class ProjectRecommendationService
 
     private function verificationScore(Project $project): float
     {
-        if (!$project->standard) {
+        if (! $project->standard) {
             return 2.5;
         }
 
@@ -308,7 +308,7 @@ class ProjectRecommendationService
         }
 
         if ($breakdown['verification'] === 10.0) {
-            $reasons[] = "Menggunakan standar terverifikasi {$project->standard}.";
+            $reasons[] = "Data proyek mencantumkan standar {$project->standard}; bukti registrinya tetap perlu diperiksa.";
         }
 
         if ($reasons === []) {

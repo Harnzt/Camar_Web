@@ -7,12 +7,12 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BuyerDashboardController;
-use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\CalculatorController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserVerificationController;
 use App\Http\Controllers\Admin\ProjectVerificationController;
+use App\Http\Controllers\Admin\ProjectManagementController;
 use App\Http\Controllers\Admin\TransactionManagementController;
 use App\Http\Controllers\Admin\AdminManagementController;
 use App\Http\Controllers\Admin\RolePermissionController;
@@ -67,24 +67,13 @@ Route::post('/watchlist/toggle', [ProjectController::class, 'toggleWatchlist'])-
 // 3. PROTECTED ROUTES (Wajib Login)
 // ========================================
 Route::middleware('auth')->group(function () {
-    // DashboardsSeller
-    Route::get('/seller/dashboard',       [SellerDashboardController::class, 'index'])->middleware('role:seller')->name('seller.dashboard');
     Route::get('/dashboard', function () {
         $user = Auth::user();
-        if ($user->isSeller()) {
-            return redirect()->route('seller.dashboard');
-        }
         if ($user->isAdministrator()) {
             return redirect()->route('admin.dashboard');
         }
         return app(BuyerDashboardController::class)->index();
     })->name('dashboard');
-    Route::delete('/seller/projects/{id}',[SellerDashboardController::class, 'destroy'])->middleware('role:seller')->name('seller.projects.destroy');
-    Route::get('/seller/projects/create', [SellerDashboardController::class, 'create'])->middleware('role:seller')->name('seller.projects.create');
-    Route::post('/seller/projects',       [SellerDashboardController::class, 'store'])->middleware('role:seller')->name('seller.projects.store');
-    Route::get('/seller/projects/{id}/edit', [SellerDashboardController::class, 'edit'])->middleware('role:seller')->name('seller.projects.edit');
-    Route::put('/seller/projects/{id}',   [SellerDashboardController::class, 'update'])->middleware('role:seller')->name('seller.projects.update');
-    Route::get('/transactions',           [SellerDashboardController::class, 'transactions'])->middleware('role:seller')->name('transactions.index');
     // DashboardsBuyer
     Route::get('/buyer/transactions', [BuyerDashboardController::class, 'transactions'])->middleware('role:buyer')->name('buyer.transactions');
     Route::get('/buyer/certificates/{order}', [BuyerDashboardController::class, 'certificate'])
@@ -139,6 +128,13 @@ Route::middleware(['auth', 'role:admin,auditor,super_admin'])
 
         Route::middleware('permission:projects.verify')->group(function () {
             Route::get('/projects', [ProjectVerificationController::class, 'index'])->name('projects.index');
+            Route::middleware('role:admin,super_admin')->group(function () {
+                Route::get('/projects/create', [ProjectManagementController::class, 'create'])->name('projects.create');
+                Route::post('/projects', [ProjectManagementController::class, 'store'])->name('projects.store');
+                Route::get('/projects/{project}/edit', [ProjectManagementController::class, 'edit'])->name('projects.edit');
+                Route::put('/projects/{project}', [ProjectManagementController::class, 'update'])->name('projects.manage.update');
+                Route::delete('/projects/{project}', [ProjectManagementController::class, 'destroy'])->name('projects.destroy');
+            });
             Route::get('/projects/{project}', [ProjectVerificationController::class, 'show'])->name('projects.show');
             Route::patch('/projects/{project}', [ProjectVerificationController::class, 'update'])
                 ->name('projects.update');
@@ -178,11 +174,6 @@ Route::middleware(['auth', 'role:admin,auditor,super_admin'])
             ->middleware('permission:audit.view')
             ->name('audit.index');
     });
-
-Route::middleware(['auth', 'role:seller'])->prefix('seller')->name('seller.')->group(function () {
-    Route::get('/dashboard', [SellerDashboardController::class, 'index'])->name('dashboard'); 
-    Route::get('/projects/create', [SellerDashboardController::class, 'create'])->name('projects.create');
-});
 
 Route::post('/chatbot/send', [ChatbotController::class, 'send'])
     ->name('chatbot.send')

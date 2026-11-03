@@ -21,10 +21,10 @@ class DashboardController extends Controller
         };
 
         $stats = [
-            'pending_users' => User::whereIn('role', ['buyer', 'seller'])->where('status', 'pending')->count(),
+            'pending_users' => User::where('role', 'buyer')->where('status', 'pending')->count(),
             'pending_documents' => DocumentVerification::where('status', 'pending')->count(),
             'pending_projects' => Project::where('verification_status', 'pending')->count(),
-            'total_users' => User::whereIn('role', ['buyer', 'seller'])->count(),
+            'total_users' => User::where('role', 'buyer')->count(),
             'managed_accounts' => User::whereIn('role', $managedRoles)->count(),
             'active_managed_accounts' => User::whereIn('role', $managedRoles)->where('status', 'verified')->count(),
             'audit_logs' => $this->scopedAuditLogs($user)->count(),
@@ -32,7 +32,7 @@ class DashboardController extends Controller
         ];
 
         $recentUsers = $user->hasPermission('users.verify')
-            ? User::whereIn('role', ['buyer', 'seller'])
+            ? User::where('role', 'buyer')
             ->latest()
             ->take(5)
             ->get()

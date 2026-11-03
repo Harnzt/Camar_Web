@@ -20,7 +20,7 @@ class UserVerificationController extends Controller
     public function index(Request $request)
     {
         $query = User::query()
-            ->whereIn('role', ['buyer', 'seller'])
+            ->where('role', 'buyer')
             ->withCount([
                 'documentVerifications' => fn ($q) => $q->where('document_type', 'not like', 'project_%'),
                 'documentVerifications as pending_documents_count' => fn ($q) => $q

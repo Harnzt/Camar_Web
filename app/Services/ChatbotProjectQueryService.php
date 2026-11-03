@@ -12,7 +12,8 @@ use Illuminate\Support\Str;
 class ChatbotProjectQueryService
 {
     public function __construct(
-        private readonly ProjectRecommendationService $recommendationService
+        private readonly ProjectRecommendationService $recommendationService,
+        private readonly ProjectPurchaseDisclosureService $purchaseDisclosureService
     ) {}
 
     public function answer(string $message, ?User $user = null): ?array
@@ -36,8 +37,8 @@ class ChatbotProjectQueryService
 
             return [
                 'text' => $count > 0
-                    ? 'Saat ini ada '.$this->formatNumber($count).' proyek offset terverifikasi dengan stok kredit tersedia.'
-                    : 'Saat ini belum ada proyek offset terverifikasi dengan stok kredit tersedia.',
+                    ? 'Saat ini ada '.$this->formatNumber($count).' proyek offset yang disetujui CAMAR dengan stok kredit tersedia.'
+                    : 'Saat ini belum ada proyek offset yang disetujui CAMAR dengan stok kredit tersedia.',
                 'custom' => [
                     'type' => 'project_catalog_result',
                     'mode' => $mode,
@@ -58,7 +59,7 @@ class ChatbotProjectQueryService
             return [
                 'text' => in_array($mode, ['most_purchased', 'most_orders'], true)
                     ? 'Belum ada pembelian berhasil untuk proyek offset yang sudah disetujui.'
-                    : 'Saat ini belum ada proyek offset terverifikasi dengan stok kredit tersedia.',
+                    : 'Saat ini belum ada proyek offset yang disetujui CAMAR dengan stok kredit tersedia.',
                 'custom' => [
                     'type' => 'project_catalog_result',
                     'mode' => $mode,
@@ -89,7 +90,7 @@ class ChatbotProjectQueryService
             'most_orders' => 'Proyek paling sering dibeli berdasarkan jumlah pesanan berhasil adalah '
                 .$first->name.': '.$this->formatNumber($first->purchase_count).' pesanan ('
                 .$this->formatNumber($first->purchased_ton).' ton).',
-            default => 'Berikut beberapa proyek offset terverifikasi yang tersedia saat ini:',
+            default => 'Berikut beberapa proyek offset yang disetujui CAMAR dan tersedia saat ini:',
         };
 
         if (in_array($mode, ['most_purchased', 'most_orders'], true) && $first->stock_available <= 0) {
@@ -106,10 +107,16 @@ class ChatbotProjectQueryService
                     $card = [
                         'id' => $project->id,
                         'name' => $project->name,
+                        'company_name' => $project->company_name,
                         'category' => $project->category,
                         'location' => $project->location,
                         'price_per_ton' => (float) $project->price_per_ton,
                         'stock_available' => (int) $project->stock_available,
+                        'standard' => $project->standard,
+                        'verified_year' => $project->verified_year,
+                        'reasons' => [$this->catalogReason($mode, $project)],
+                        'purchase_disclosure' => $this->purchaseDisclosureService
+                            ->forProject($project),
                         'url' => route('projects.show', $project->id),
                     ];
 
@@ -194,7 +201,7 @@ class ChatbotProjectQueryService
         }
 
         $cheapest = $projects->first();
-        $subtotal = $requiredTon * (float) $cheapest->price_per_ton;
+        $disclosure = $this->purchaseDisclosureService->forProject($cheapest, $requiredTon);
         $remainingEmission = clone $emission;
         $remainingEmission->total_kg = $remainingKg;
         $projects->each(fn (Project $project) => $this->recommendationService
@@ -202,14 +209,21 @@ class ChatbotProjectQueryService
         $custom['recommendations'] = $projects->map(fn (Project $project) => [
             'id' => $project->id,
             'name' => $project->name,
+            'company_name' => $project->company_name,
             'category' => $project->category,
             'location' => $project->location,
             'price_per_ton' => (float) $project->price_per_ton,
             'stock_available' => (int) $project->stock_available,
+            'standard' => $project->standard,
+            'verified_year' => $project->verified_year,
             'required_ton' => $requiredTon,
             'total_offset_cost' => round($requiredTon * (float) $project->price_per_ton, 2),
             'score' => $project->recommendation_score,
             'reasons' => $project->recommendation_reasons,
+            'recommendation_breakdown' => $project->recommendation_breakdown,
+            'dominant_scope' => $project->dominant_scope,
+            'purchase_disclosure' => $this->purchaseDisclosureService
+                ->forProject($project, $requiredTon),
             'url' => route('projects.show', $project->id),
         ])->values()->all();
 
@@ -220,8 +234,9 @@ class ChatbotProjectQueryService
                 .' kg membutuhkan '.$this->formatNumber($requiredTon)
                 .' ton kredit utuh. Proyek termurah dengan stok cukup adalah '
                 .$cheapest->name.' (Rp '.$this->formatNumber($cheapest->price_per_ton)
-                .' per ton); perkiraan biaya kredit Rp '.$this->formatNumber($subtotal)
-                .' sebelum pajak dan biaya checkout.',
+                .' per ton); subtotal Rp '.$this->formatNumber($disclosure['subtotal'])
+                .', PPN 11% Rp '.$this->formatNumber($disclosure['tax'])
+                .', sehingga estimasi totalnya Rp '.$this->formatNumber($disclosure['estimated_total']).'.',
             'custom' => $custom,
         ];
     }
@@ -321,6 +336,18 @@ class ChatbotProjectQueryService
         return null;
     }
 
+    private function catalogReason(string $mode, Project $project): string
+    {
+        return match ($mode) {
+            'cheapest' => 'Ditampilkan karena termasuk proyek dengan harga per ton terendah saat ini.',
+            'most_expensive' => 'Ditampilkan untuk menjawab urutan harga tertinggi, bukan sebagai rekomendasi hemat.',
+            'most_stock' => 'Ditampilkan karena stok kreditnya termasuk yang terbanyak.',
+            'most_purchased' => 'Ditampilkan berdasarkan total ton dari transaksi yang sudah berhasil.',
+            'most_orders' => 'Ditampilkan berdasarkan jumlah pesanan yang sudah berhasil.',
+            default => 'Proyek disetujui CAMAR dan memiliki stok kredit yang tersedia.',
+        };
+    }
+
     private function formatNumber(float|int|string $value): string
     {
         return number_format((float) $value, 0, ',', '.');
@@ -331,3 +358,4 @@ class ChatbotProjectQueryService
         return number_format($value, 2, ',', '.');
     }
 }
+    
