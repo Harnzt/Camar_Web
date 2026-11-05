@@ -292,6 +292,14 @@ class ChatbotController extends Controller
                 ['title' => 'Lainnya', 'payload' => 'Lainnya'],
                 ['title' => 'Tidak ada', 'payload' => 'Tidak ada'],
             ];
+        } elseif (str_contains($text, 'Bahan bakar memasak atau energi rumah tangga apa yang paling sering kamu gunakan')) {
+            $message['buttons'] = [
+                ['title' => 'LPG', 'payload' => 'LPG'],
+                ['title' => 'CNG / gas pipa', 'payload' => 'CNG'],
+                ['title' => 'Minyak tanah', 'payload' => 'Minyak tanah'],
+                ['title' => 'Kayu bakar', 'payload' => 'Kayu bakar'],
+                ['title' => 'Tidak ada', 'payload' => 'Tidak ada'],
+            ];
         } elseif (str_contains($text, 'Pilih transportasi umum yang paling ingin dimasukkan')) {
             $message['buttons'] = [
                 ['title' => 'Pesawat domestik', 'payload' => 'Pesawat domestik'],

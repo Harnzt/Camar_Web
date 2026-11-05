@@ -17,6 +17,7 @@ const EF_DB = {
         cng:          { ef: 56.1,  unit: 'kgCO₂e/kg', ref: '' },
         avtur:        { ef: 72.36, unit: 'Ton CO2/TJ',  ref: '' },
         kerosene:     { ef: 72.43, unit: 'Ton CO2/TJ',  ref: '' },
+        wood:         { ef: 1.747, unit: 'kgCO₂e/kg',   ref: '' },
         coal:         { ef: 99.718, unit: 'kgCO₂e/GJ', ref: '' },
         coal_bit:     { ef: 99.718, unit: 'kgCO₂e/GJ', ref: '' },
         naturalgas:   { ef: 57.600, unit: 'kgCO₂e/GJ', ref: '' },
@@ -575,6 +576,7 @@ function addRow(group) {
     newRow.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
     newRow.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
     newRow.querySelectorAll('.unit-stat').forEach(u => u.textContent = 'Liter/thn');
+    newRow.querySelectorAll('.unit-dynamic[data-for="p_energy_fuel"]').forEach(u => u.textContent = 'kg/bln');
 
     container.appendChild(newRow);
     updateTransitModeFields(newRow);
@@ -591,6 +593,7 @@ function removeRow(btn) {
         row.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
         row.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
         row.querySelectorAll('.unit-stat').forEach(u => u.textContent = 'Liter/thn');
+        row.querySelectorAll('.unit-dynamic[data-for="p_energy_fuel"]').forEach(u => u.textContent = 'kg/bln');
         updateTransitModeFields(row);
     } else {
         row.remove();
@@ -608,12 +611,21 @@ function getStationaryFuelUnit(fuelKey) {
     return 'Liter/thn';
 }
 
+function getPersonalEnergyUnit(fuelKey) {
+    if (fuelKey === 'cng') return 'm³/bln';
+    if (fuelKey === 'kerosene') return 'Liter/bln';
+    return 'kg/bln';
+}
+
 function updateEfChip(selectEl, group) {
     const val  = selectEl.value;
     const row  = selectEl.closest('.entry-row');
     if (group === 'c_stat') {
         const unitStat = row?.querySelector('.unit-stat');
         if (unitStat) unitStat.textContent = getStationaryFuelUnit(val);
+    } else if (group === 'p_energy') {
+        const unitEnergy = row?.querySelector('.unit-dynamic[data-for="p_energy_fuel"]');
+        if (unitEnergy) unitEnergy.textContent = getPersonalEnergyUnit(val);
     }
     const chip = row?.querySelector(`.ef-chip[data-ef-group="${group}"]`);
     if (!chip) return;
@@ -635,7 +647,7 @@ function updateEfChip(selectEl, group) {
         const vType = row?.querySelector('[name="p_vehicle_type[]"]')?.value;
         const vFuel = row?.querySelector('[name="p_vehicle_fuel[]"]')?.value;
         const vEf = EF_DB.vehicle[vType]?.[vFuel];
-        if (vEf !== undefined) efData = { ef: vEf, unit: 'Ton CO2/TJ', ref: '' };
+        if (vEf !== undefined) efData = { ef: vEf, unit: vFuel === 'listrik' ? 'kgCO₂e/km' : 'Ton CO2/TJ', ref: '' };
     }
     else if (group === 'p_food')                     efData = getFoodEF(val);
     else if (group === 'p_flight')                   efData = getTransitEF(val);
@@ -646,7 +658,7 @@ function updateEfChip(selectEl, group) {
     }
 
     if (efData) {
-        chip.innerHTML = `${efData.display || efData.ef} ${efData.unit}<br><small>${efData.ref}</small>`;
+        chip.innerHTML = `${efData.display !== undefined ? efData.display : efData.ef} ${efData.unit}<br><small>${efData.ref}</small>`;
     } else {
         chip.textContent = '—';
     }
@@ -656,8 +668,18 @@ function updateVehicleFuel(typeSelect) {
     const fuelSel = typeSelect.closest('.entry-fields')?.querySelector('[name="p_vehicle_fuel[]"]');
     if (!fuelSel) return;
     const t = typeSelect.value;
+    const dieselOpt = fuelSel.querySelector('option[value="diesel"]');
+    if (dieselOpt) {
+        const allowDiesel = !t || t === 'car_diesel';
+        dieselOpt.disabled = !allowDiesel;
+        dieselOpt.hidden = !allowDiesel;
+    }
     if (t === 'car_diesel') {
-        fuelSel.querySelector('option[value="ron98"]') && (fuelSel.value = 'ron88');
+        if (!fuelSel.value && dieselOpt) {
+            fuelSel.value = 'diesel';
+        }
+    } else if (fuelSel.value === 'diesel') {
+        fuelSel.value = '';
     }
 }
 
@@ -735,7 +757,10 @@ function calcPersonalAll() {
     });
 
     let vehicle = 0;
-    rowTriples('p_vehicle_type','p_vehicle_fuel','p_vehicle_km').forEach(([type, fuel, km]) => {
+    document.querySelectorAll('[data-group="p_vehicle"]').forEach((row) => {
+        const type = row.querySelector('[name="p_vehicle_type[]"]')?.value;
+        const fuel = row.querySelector('[name="p_vehicle_fuel[]"]')?.value;
+        const km = parseFloat(row.querySelector('[name="p_vehicle_km[]"]')?.value) || 0;
         const vEF = EF_DB.vehicle[type];
         if (vEF) {
             const efVal = vEF[fuel] !== undefined ? vEF[fuel] : (vEF.ron88 || 0);
@@ -1196,6 +1221,7 @@ function resetCalculator() {
     document.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
     document.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
     document.querySelectorAll('.unit-stat').forEach(u => u.textContent = 'Liter/thn');
+    document.querySelectorAll('.unit-dynamic[data-for="p_energy_fuel"]').forEach(u => u.textContent = 'kg/bln');
     document.querySelectorAll('.preview-value').forEach(el => el.textContent = '0');
     updateAllTransitModeFields();
 

@@ -135,10 +135,12 @@
                             <div class="entry-fields">
                                 <div class="input-group">
                                     <label class="input-label">Jenis Bahan Bakar</label>
-                                    <select class="input-field select-field" name="p_energy_fuel[]" onchange="calcLive()">
+                                    <select class="input-field select-field" name="p_energy_fuel[]" onchange="updateEfChip(this, 'p_energy'); calcLive()">
                                         <option value="">-- Pilih Bahan Bakar --</option>
                                         <option value="lpg">LPG (Gas Tabung)</option>
-                                         <option value="cng">CNG (Gas Alam)</option>
+                                        <option value="cng">CNG (Gas Alam)</option>
+                                        <option value="kerosene">Minyak Tanah (Kerosene)</option>
+                                        <option value="wood">Kayu Bakar / Biomassa</option>
                                     </select>
                                 </div>
                                 <div class="input-group">
@@ -193,20 +195,23 @@
                             <div class="entry-fields">
                                 <div class="input-group">
                                     <label class="input-label">Jenis Kendaraan</label>
-                                    <select class="input-field select-field" name="p_vehicle_type[]" onchange="updateVehicleFuel(this); calcLive()">
+                                    <select class="input-field select-field" name="p_vehicle_type[]" onchange="updateVehicleFuel(this); updateEfChip(this, 'p_vehicle'); calcLive()">
                                         <option value="">-- Pilih Kendaraan --</option>
-                                        <option value="car_petrol">Mobil Pribadi</option>
+                                        <option value="car_petrol">Mobil Bensin</option>
+                                        <option value="car_diesel">Mobil Diesel</option>
                                         <option value="motorcycle">Sepeda Motor</option>
                                     </select>
                                 </div>
                                 <div class="input-group">
                                     <label class="input-label">Jenis Bahan Bakar</label>
-                                    <select class="input-field select-field" name="p_vehicle_fuel[]" onchange="calcLive()">
+                                    <select class="input-field select-field" name="p_vehicle_fuel[]" onchange="updateEfChip(this, 'p_vehicle'); calcLive()">
                                         <option value="">-- Pilih BBM --</option>
                                         <option value="ron98">Bensin RON98</option>
                                         <option value="ron92">Bensin RON92</option>
                                         <option value="ron90">Bensin RON90</option>
                                         <option value="ron88">Bensin RON88</option>
+                                        <option value="diesel">Solar / Diesel</option>
+                                        <option value="listrik">Listrik (EV)</option>
                                     </select>
                                 </div>
                                 <div class="input-group">
@@ -495,12 +500,13 @@
                             <div class="entry-fields">
                                 <div class="input-group">
                                     <label class="input-label">Jenis Komoditas</label>
-                                    <select class="input-field select-field" name="p_food_type[]" onchange="calcLive()">
+                                    <select class="input-field select-field" name="p_food_type[]" onchange="updateEfChip(this, 'p_food'); calcLive()">
                                         <option value="">-- Pilih Pangan --</option>
+                                        <option value="rice">Beras / Nasi</option>
                                         <option value="beef">Daging Sapi / Kambing</option>
                                         <option value="poultry">Daging Ayam / Unggas</option>
                                         <option value="fish">Ikan / Seafood</option>
-                                        <option value="veg">Sayuran </option>
+                                        <option value="veg">Sayuran</option>
                                         <option value="egg">Telur</option>
                                         <option value="fruits">Buah-buahan</option>
                                         <option value="dairy">Susu & Produk Susu</option>
