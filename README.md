@@ -1,9 +1,14 @@
 <p align="center"><img src="public/images/logo.png" width="150" alt="CAMAR Logo"></p>
 
-# Dokumentasi Proyek CAMAR (Carbon Offset Platform)
+# Dokumentasi Proyek CAMAR (Retail Carbon Offset Platform)
 
 ## 1. Ikhtisar Proyek (Project Overview)
-**CAMAR** adalah sebuah platform berbasis web yang dirancang untuk memfasilitasi transaksi perdagangan karbon (Carbon Offset). Platform ini mempertemukan pihak penyedia proyek karbon (*Seller*) dengan pihak yang ingin mengompensasi jejak karbon mereka (*Buyer*). Selain itu, sistem dilengkapi dengan Kalkulator Emisi Karbon dan panel administrasi yang *real-time* untuk mengawasi seluruh aktivitas dan verifikasi di dalam aplikasi.
+**CAMAR (Carbon Market & Offset Retail)** adalah platform *retail carbon offset* berbasis web yang memfasilitasi pembelian kredit karbon (*carbon credit*) secara langsung oleh **Buyer Individu** maupun **Buyer Perusahaan** di Indonesia.
+
+Berbeda dengan marketplace dua sisi tradisional, CAMAR beroperasi dengan **model Retail Terpusat**:
+- Seluruh katalog **Proyek Karbon** dikurasi, dikelola, dan disediakan secara langsung oleh **Admin / Super Admin CAMAR**, serta diverifikasi oleh **Auditor**.
+- Pengguna publik mendaftar sebagai **Buyer** (**Individu** atau **Perusahaan**) untuk menghitung jejak emisi karbon mereka (berstandar *GHG Protocol Scope 1, 2, dan 3*), mendapatkan rekomendasi proyek offset yang sesuai, melakukan pembelian kredit karbon secara retail melalui **Midtrans**, dan memperoleh **Sertifikat Carbon Offset** resmi.
+- Dilengkapi dengan **CAMI (CAMAR Intelligence)**, asisten chatbot berbasis Rasa yang terintegrasi untuk memandu kalkulasi emisi (termasuk mode *Guest / Sesi Tamu*), simulasi biaya offset, dan konsultasi proyek karbon.
 
 ---
 
@@ -15,7 +20,8 @@ Proyek ini telah dikonfigurasi dengan *shortcut* Composer untuk mempermudah pros
 - **PHP** >= 8.2
 - **Composer** (terbaru)
 - **Node.js** & **NPM**
-- **MySQL** / **MariaDB** (atau SQLite untuk kemudahan)
+- **MySQL** / **MariaDB** (`camar_kel1`)
+- **Python 3.10+** & **Rasa** *(opsional, untuk menjalankan layanan chatbot CAMI)*
 
 ### Langkah-langkah Instalasi
 1. **Clone repositori** ini ke dalam mesin lokal Anda:
@@ -28,113 +34,111 @@ Proyek ini telah dikonfigurasi dengan *shortcut* Composer untuk mempermudah pros
    ```bash
    composer run setup
    ```
-   *(Catatan: Pastikan Anda telah mengonfigurasi koneksi database Anda di file `.env` sebelum menjalankan perintah ini, atau biarkan default jika menggunakan SQLite)*.
+   *(Catatan: Pastikan Anda telah mengonfigurasi koneksi database MySQL Anda di file `.env` sebelum menjalankan perintah ini).*
 
 3. **Menjalankan Server Pengembangan (Development Server)**:
    Gunakan perintah berikut untuk menjalankan server PHP, antrean pekerjaan (Queue), dan Vite bundler secara bersamaan dalam satu terminal:
    ```bash
    composer run dev
    ```
-   Perintah ini akan menggunakan `concurrently` untuk melayani:
-   - `php artisan serve` (Server aplikasi di http://127.0.0.1:8000)
+   Perintah ini menjalankan:
+   - `php artisan serve` (Server aplikasi di `http://127.0.0.1:8000`)
    - `php artisan queue:listen` (Memproses antrean di background)
-   - `npm run dev` (Hot Module Replacement untuk Tailwind CSS & JS)
+   - `npm run dev` (Hot Module Replacement untuk CSS & JS)
 
-### Konfigurasi Tambahan (.env)
-Pastikan Anda telah mengisi *keys* untuk layanan eksternal di dalam `.env` Anda:
-- **Database**: Ubah `DB_CONNECTION`, `DB_DATABASE`, dll sesuai sistem Anda.
-- **Midtrans**: Isi `MIDTRANS_SERVER_KEY` dan `MIDTRANS_CLIENT_KEY`.
-- **Reverb (WebSocket)**: Secara default, `php artisan install:broadcasting` (atau setup Reverb) sudah akan mengisi `REVERB_APP_ID`, `REVERB_APP_KEY`, dan `REVERB_APP_SECRET`.
+### Konfigurasi Tambahan (`.env`)
+Pastikan Anda telah mengisi konfigurasi berikut di dalam `.env`:
+- **Database**: `DB_CONNECTION=mysql`, `DB_DATABASE=camar_kel1`, `DB_USERNAME`, dan `DB_PASSWORD`.
+- **Midtrans**: Isi `MIDTRANS_ID`, `MIDTRANS_SERVER_KEY`, dan `MIDTRANS_CLIENT_KEY`.
+- **Rasa Chatbot**: Pastikan `RASA_WEBHOOK_URL` mengarah ke server Rasa (`http://127.0.0.1:5005/webhooks/rest/webhook`).
+- **Reverb (WebSocket)**: Konfigurasi `REVERB_APP_ID`, `REVERB_APP_KEY`, dan `REVERB_APP_SECRET` untuk notifikasi *real-time* pada panel admin.
 
 ---
 
 ## 3. Tech Stack & Dependensi Utama
 - **Bahasa & Framework**: PHP 8.2+, Laravel 12
-- **Frontend / Styling**: Blade Templating, Tailwind CSS v4, Vanilla JavaScript
+- **Frontend / Styling**: Blade Templating, Tailwind CSS v4, Custom CSS, Vanilla JavaScript
 - **Bundler**: Vite
-- **Database**: MySQL / SQLite (via Eloquent ORM)
+- **Database**: MySQL (via Eloquent ORM) + Dataset Bandara (`airports_data`) untuk kalkulasi rute penerbangan Haversine
+- **Chatbot Engine**: Rasa Open Source & Rasa SDK (`CAMI_CHATBOT`) terintegrasi dengan layanan internal Laravel
 - **Real-Time WebSockets**: Laravel Reverb & Laravel Echo (Pusher-compatible)
-- **Payment Gateway**: Midtrans (Snap Token & Webhook API)
-- **Auth & API**: Laravel Sanctum (untuk API Mobile/Eksternal)
+- **Payment Gateway**: Midtrans (Snap Token & Webhook Notification API)
+- **Auth & API**: Session Auth & Laravel Sanctum (untuk endpoint API Mobile/Eksternal)
 
 ---
 
 ## 4. Hak Akses & Peran (*Roles*)
-Platform ini menerapkan sistem *Multi-Role* yang diatur melalui middleware khusus:
+Dalam model retail CAMAR, hak akses dibagi menjadi:
 
-1. **Buyer (Pembeli)**
-   - Dapat berupa **Individu** (Personal) atau **Perusahaan** (Company).
-   - Dapat menghitung emisi karbon (wajib sebelum membeli).
-   - Menjelajahi proyek karbon, menambah ke keranjang (*Cart*), dan melakukan Checkout.
-   - Mengelola transaksi dan mengunduh sertifikat *Carbon Offset*.
+1. **Buyer (Pembeli Retail)**
+   - Terbagi menjadi dua kategori akun:
+     - **Individu (`personal`)**: Mendaftar dengan data identitas diri, pekerjaan (pilihan terstruktur), alamat wilayah Indonesia (Negara, Provinsi, Kabupaten/Kota, Kecamatan, Kode Pos, Alamat Lengkap), dan dokumen NPWP.
+     - **Perusahaan (`company`)**: Mendaftar dengan data instansi/perusahaan, PIC, jabatan, industri, alamat wilayah lengkap, serta dokumen legalitas wajib (Akta Pendirian, NPWP, NIB/SIUP) dan opsional (ISO 14001).
+   - Menghitung jejak emisi karbon pada **Kalkulator Karbon** atau melalui **Chatbot CAMI** (wajib memiliki kalkulasi emisi sebelum melakukan pembelian kredit karbon).
+   - Menjelajahi katalog proyek retail, mendapatkan rekomendasi proyek berbasis kecocokan profil emisi, menambahkan kredit karbon ke keranjang (*Cart*), dan melakukan *Checkout*.
+   - Memantau saldo karbon (*Carbon Balance*), riwayat transaksi, dan mengunduh **Sertifikat Carbon Offset**.
 
-2. **Seller (Penjual / Penyedia Proyek)**
-   - Wajib berbentuk **Perusahaan** dan mengunggah dokumen sertifikasi standar (misal: *Gold Standard* atau *VCS*).
-   - Membuat, mengedit, dan mengelola katalog Proyek Karbon.
-   - Memantau transaksi yang masuk untuk proyek-proyek mereka.
+2. **Admin & Super Admin (Pengelola Retail)**
+   - **Manajemen Katalog Proyek Retail**: Menambahkan, mengedit, memperbarui stok/harga, dan menghapus proyek karbon secara langsung melalui *Admin Panel* (`/admin/projects`).
+   - **Verifikasi Buyer & Dokumen**: Memeriksa pendaftaran akun Buyer baru serta memverifikasi dokumen legalitas (NPWP, Akta, NIB, ISO).
+   - **Manajemen Transaksi & Sertifikat**: Memantau pembayaran kredit karbon dan menerbitkan sertifikat offset.
+   - **Manajemen Administrator & Hak Akses** *(khusus Super Admin)*: Mengelola akun admin/auditor, *role permissions*, dan memantau log login serta jejak audit (*Audit Trail*).
 
-3. **Admin / Super Admin / Auditor**
-   - **Admin/Super Admin**: Mengelola peran (*role/permissions*), konfigurasi sistem, dan pengguna.
-   - **Auditor**: Memverifikasi validitas proyek baru dari Seller dan memverifikasi dokumen entitas.
-   - Mengakses panel kontrol (*Control Center*) secara *real-time* (notifikasi pendaftaran baru dan transaksi).
+3. **Auditor (Auditor Pemerintah / Independen)**
+   - Memverifikasi kelayakan, standar metodologi, dan keabsahan proyek karbon yang akan ditayangkan di katalog retail.
+   - Memeriksa dokumen verifikasi pengguna dan meninjau log audit kepatuhan (*compliance*).
 
----
-
-## 5. Struktur Database & Model (Core Models)
-
-Sistem menggunakan Eloquent ORM dengan model-model utama berikut yang berada di `app/Models/`:
-
-- **`User`**: Mengelola seluruh pengguna (buyers, sellers, admins). Menyimpan data autentikasi, status akun (`pending`, `verified`, `suspended`), dan JSON metadata dokumen.
-- **`Project`**: Mewakili entitas proyek karbon yang dijual. Memiliki atribut kapasitas/stok ton karbon, harga per ton (`price_per_ton`), dan status persetujuan.
-- **`Order`** / **`Transaction`**: Menyimpan data pembelian kredit karbon. Mencatat relasi antara *Buyer* dan *Project*, jumlah (*quantity*), pajak, serta status pembayaran (`pending`, `paid`, `cancelled`, dll).
-- **`EmissionCalculation`**: Menyimpan hasil hitung jejak karbon dari pengguna.
-- **`DocumentVerification`**: Mengatur status verifikasi masing-masing dokumen legal (NPWP, NIB, Akta, dll) yang diunggah oleh entitas Perusahaan/Seller.
-- **`Role` & `Permission`**: Struktur otorisasi khusus untuk granularitas hak akses panel kontrol (misalnya: *users.verify*, *projects.verify*).
-- **`AdminLoginLog` & `AdminActivityLog`**: Pencatatan jejak audit (*Audit Trail*) untuk aktivitas administrator di back-office.
+*(Catatan: Peran `seller` telah dinonaktifkan pada alur login dan registrasi publik karena penyediaan stok kredit karbon dikelola langsung secara retail oleh platform CAMAR).*
 
 ---
 
-## 6. Alur Kerja Utama (*Main Workflows*)
+## 5. Fitur Utama Platform
 
-### A. Alur Registrasi & Verifikasi (*Onboarding*)
-1. Pengguna memilih tipe peran (Buyer atau Seller) dan kategori (Personal atau Company).
-2. Form multi-step (dengan validasi SweetAlert) mengumpulkan data profil, *password*, dan dokumen pendukung.
-3. Setelah *submit*, foto profil di-crop dan disimpan menggunakan Base64 (via Javascript Cropper.js).
-4. Akun diset sebagai `pending`. Notifikasi disebarkan (*broadcast*) ke *Admin Dashboard* menggunakan WebSocket (Reverb).
-5. Admin melakukan verifikasi manual terhadap dokumen melalui *Admin Panel*. Jika lolos, status user diubah menjadi `verified`.
+### A. Kalkulator Emisi Karbon (*GHG Protocol Scope 1, 2, & 3*)
+Kalkulator karbon di website (`/kalkulator`) dan chatbot CAMI menggunakan faktor emisi yang telah diselaraskan (mengacu pada KLHK, Kementerian ESDM, IPCC 2006, DEFRA, dan PT KAI):
+- **Buyer Individu (`personal`)**:
+  - **Scope 1**: Konsumsi energi rumah tangga (LPG, CNG) dan kendaraan pribadi (Mobil Bensin/Diesel, Sepeda Motor).
+  - **Scope 2**: Konsumsi listrik rumah tangga menggunakan faktor emisi rata-rata nasional PLN (`0,85 kgCO₂e/kWh`).
+  - **Scope 3**: Transportasi umum (Bus, Kereta, Ojek Online/Ojol, dan Pesawat dengan perhitungan jarak otomatis berbasis koordinat bandara *Haversine*), konsumsi pangan, penggunaan air bersih, dan timbulan sampah rumah tangga.
+- **Buyer Perusahaan (`company`)**:
+  - **Scope 1 — Pembakaran Stasioner**: 14 jenis bahan bakar industri/genset/boiler (Minyak Solar CN53/CN51/CN48, Minyak Diesel, Minyak Bakar MFO/HFO, Bensin RON98/92/90/88, Minyak Tanah, LPG, Gas Alam, CNG, dan Batubara) dengan satuan dinamis (`Liter/thn`, `kg/thn`, `Nm³/thn`).
+  - **Scope 1 — Pembakaran Bergerak**: Armada kendaraan operasional berdasarkan konsumsi BBM (`Liter/thn`) atau jarak tempuh (`km/thn`).
+  - **Scope 2 — Listrik PLN Wilayah Grid**: Faktor emisi spesifik per jaringan interkoneksi wilayah Kementerian ESDM (**Grid Jawa-Bali**, **Grid Sumatera**, **Grid Kalimantan**, **Grid Sulawesi**, serta **Grid Maluku & Papua**).
+  - **Scope 3 — Perjalanan Dinas**: Penerbangan dinas (otomatis menghitung jarak bandara asal-tujuan × jumlah penumpang × kelas kabin), akomodasi hotel (`kamar × malam`), dan perjalanan kereta api KAI (7 kelas kereta × jumlah penumpang/pax × jarak tempuh).
 
-### B. Alur Kalkulasi & Pembelian (*Checkout Flow*)
-1. Buyer melakukan perhitungan emisi karbon di halaman Kalkulator (wajib sebelum membeli).
-2. Buyer menelusuri halaman Proyek dan memasukkan proyek ke *Cart* (Session-based) atau klik *Buy Now*.
-3. Pada halaman *Checkout*, fungsi `OrderController@store` menyimpan transaksi ke database dengan status `pending` dan *order_number* unik.
-4. Pengguna diteruskan ke halaman konfirmasi yang me-*render* **Midtrans Snap Popup** menggunakan *Snap Token* hasil integrasi Rest API.
-5. Setelah dibayar, Midtrans mengirimkan notifikasi asinkron ke *Webhook* (`/orders/midtrans/notification`).
-6. Aplikasi memvalidasi `signature_key` dari Midtrans dan mengubah status pesanan menjadi `paid`, kemudian secara otomatis mengurangi `stock_available` dari proyek.
+### B. Chatbot Asisten Karbon "CAMI"
+- Mendukung **Sesi Tamu (*Guest Session*)** maupun **Buyer Terautentikasi**.
+- Dapat menjalankan kalkulasi emisi Individu & Perusahaan secara percakapan, memberikan rekomendasi proyek yang paling cocok atau paling ekonomis untuk meng-offset sisa emisi di dashboard, menampilkan simulasi pembelian kredit karbon, serta menjawab pertanyaan seputar katalog proyek secara *real-time* dari database.
 
----
-
-## 7. Integrasi Eksternal (3rd Party Services)
-
-### Midtrans (Payment Gateway)
-- Konfigurasi diletakkan di `config/midtrans.php` atau `.env`.
-- Pengelolaan dilakukan di `OrderController.php`. Webhook Midtrans dikecualikan dari middleware proteksi CSRF (diatur dalam `bootstrap/app.php`).
-
-### Laravel Reverb (Realtime WebSocket)
-- Digunakan untuk notifikasi seketika di halaman *Admin Dashboard* (seperti pendaftaran user baru).
-- Dikonfigurasi melalui `config/broadcasting.php`. Channel didengarkan (*listened*) melalui Laravel Echo di bagian *frontend*.
+### C. Rekomendasi Proyek & Transaksi Retail
+- **Sistem Rekomendasi (`ProjectRecommendationService`)**: Mencocokkan profil emisi Buyer (sektor dominan Scope 1/2/3 dan kebutuhan tonase) dengan kategori, lokasi, serta ketersediaan stok proyek karbon.
+- **Pembelian & Pembayaran Midtrans**: Mendukung pembelian multi-proyek via keranjang (*Cart*) maupun pembelian langsung (*Checkout*), terintegrasi dengan **Midtrans Snap** dan *Webhook Notification* otomatis.
+- **Sertifikat Carbon Offset**: Diterbitkan untuk setiap transaksi yang telah selesai diverifikasi sebagai bukti kontribusi pengurangan emisi karbon.
 
 ---
 
-## 8. Struktur Direktori Kunci
+## 6. Struktur Database & Model Utama (`app/Models/`)
+- **`User`**: Mengelola akun `buyer` (`personal` / `company`), `admin`, `auditor`, dan `super_admin`. Menyimpan data profil, pekerjaan (`job_title`), data wilayah terpisah (`country`, `province`, `regency`, `district`, `postal_code`), alamat gabungan (`address`), status verifikasi (`pending`, `verified`, `rejected`, `suspended`), serta metadata dokumen.
+- **`Project`**: Menyimpan katalog proyek karbon retail yang dikelola Admin (kategori, lokasi, standar sertifikasi, harga per ton `price_per_ton`, stok tersedia `stock_available`, dan status persetujuan).
+- **`EmissionCalculation`**: Menyimpan riwayat perhitungan emisi karbon pengguna beserta rincian *breakdown* per Scope (`scope1_kg`, `scope2_kg`, `scope3_kg`, `total_kg`, dan JSON `scope_details`).
+- **`Order` & `Transaction`**: Mencatat pesanan pembelian kredit karbon retail, relasi dengan proyek, status pembayaran Midtrans, serta nomor dan data sertifikat offset.
+- **`CartItem` & `Watchlist`**: Mengelola keranjang belanja kredit karbon dan daftar pantau proyek favorit Buyer.
+- **`DocumentVerification`**: Mengelola status verifikasi masing-masing dokumen legalitas Buyer (NPWP, Akta, NIB, ISO).
+- **`AdminLoginLog` & `AdminActivityLog`**: Mencatat riwayat login dan aktivitas administrator/auditor untuk kebutuhan audit keamanan.
+
+---
+
+## 7. Struktur Direktori Kunci
 | Direktori | Deskripsi |
 |-----------|-----------|
-| `app/Http/Controllers/` | Memuat logika bisnis aplikasi (Auth, Cart, Order, Project, Chatbot, dll). |
-| `app/Http/Controllers/Api/` | Endpoint khusus yang melayani format JSON (dilindungi oleh Sanctum). |
-| `app/Http/Controllers/Admin/` | Controller spesifik untuk area *Control Center* / Panel Admin. |
-| `resources/views/main_page/` | Menyimpan template antarmuka, dibagi menjadi sub-direktori fungsional (`admin-panel/`, `projects/`, `login/`). |
-| `routes/web.php` & `api.php` | Konfigurasi pemetaan rute. Route web menggunakan proteksi CSRF dan rate limit tambahan. |
+| `app/Http/Controllers/` | Controller utama aplikasi (`AuthController`, `CalculatorController`, `ProjectController`, `CartController`, `OrderController`, `BuyerDashboardController`, `ChatbotController`). |
+| `app/Http/Controllers/Admin/` | Controller panel administrasi & manajemen retail (`ProjectManagementController`, `ProjectVerificationController`, `UserVerificationController`, `TransactionManagementController`, `AdminManagementController`, `AuditLogController`). |
+| `app/Services/` | Layanan logika bisnis inti (`CarbonCalculationService`, `ProjectRecommendationService`, `ChatbotResultService`, `ChatbotProjectQueryService`, `ChatbotInformationService`). |
+| `resources/views/main_page/` | Template antarmuka Blade untuk halaman publik, kalkulator, registrasi multi-step, dashboard buyer, dan `admin-panel/`. |
+| `public/js/` & `public/css/` | Aset JavaScript (`calculator.js`, `register.js`, `chatbot.js`, dll.) dan stylesheet per modul halaman. |
+| `routes/web.php` & `routes/api.php` | Definisi rute web (dilindungi CSRF & middleware role/permission) serta endpoint API Sanctum. |
 
 ---
 
 > [!TIP]
-> **Praktik Pengembangan**: Ketika membuat perubahan pada CSS (terutama kelas Tailwind baru), pastikan server `vite` aktif (sudah tergabung di dalam perintah `composer run dev`). Kode-kode formating sangat disarankan untuk dirapikan mengikuti standar *Laravel Pint* menggunakan perintah `vendor/bin/pint`.
+> **Praktik Pengembangan**: Ketika mengubah aset frontend atau kelas Tailwind CSS, pastikan server `vite` aktif melalui `composer run dev`. Jika mengubah logika percakapan pada folder `CAMI_CHATBOT`, pastikan server `rasa run actions` (port `5055`) dan `rasa run --enable-api` (port `5005`) di-restart agar perubahan segera diterapkan.
