@@ -397,6 +397,13 @@
     box-shadow: 0 0 0 4px rgba(103, 192, 144, 0.1);
 }
 
+.form-group select:disabled,
+.form-group input:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
 /* Password Field */
 .password-wrapper {
     position: relative;

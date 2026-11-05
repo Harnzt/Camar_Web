@@ -187,6 +187,13 @@ function validateStep(step) {
                 }
             }
 
+            const postalInput = activeForm.querySelector('input[name="postal_code"]');
+            if (postalInput && !/^\d{5}$/.test(postalInput.value.trim())) {
+                showAlert('Kode pos harus terdiri dari 5 digit angka!');
+                postalInput.focus();
+                return false;
+            }
+
             const prefix = (selectedCategoryType === 'company') ? 'Company' : 'Personal';
             const passwordField = document.getElementById('password' + prefix);
             const confirmField = document.getElementById('confirmPassword' + prefix);
@@ -423,9 +430,155 @@ document.querySelectorAll('input[type="file"]').forEach(input => {
 });
 
 // ====================================
+// WILAYAH INDONESIA CASCADING DROPDOWNS
+// ====================================
+const WILAYAH_API_BASE = 'https://www.emsifa.com/api-wilayah-indonesia/api';
+
+const FALLBACK_PROVINCES = [
+    { id: '11', name: 'ACEH' },
+    { id: '12', name: 'SUMATERA UTARA' },
+    { id: '13', name: 'SUMATERA BARAT' },
+    { id: '14', name: 'RIAU' },
+    { id: '15', name: 'JAMBI' },
+    { id: '16', name: 'SUMATERA SELATAN' },
+    { id: '17', name: 'BENGKULU' },
+    { id: '18', name: 'LAMPUNG' },
+    { id: '19', name: 'KEPULAUAN BANGKA BELITUNG' },
+    { id: '21', name: 'KEPULAUAN RIAU' },
+    { id: '31', name: 'DKI JAKARTA' },
+    { id: '32', name: 'JAWA BARAT' },
+    { id: '33', name: 'JAWA TENGAH' },
+    { id: '34', name: 'DI YOGYAKARTA' },
+    { id: '35', name: 'JAWA TIMUR' },
+    { id: '36', name: 'BANTEN' },
+    { id: '51', name: 'BALI' },
+    { id: '52', name: 'NUSA TENGGARA BARAT' },
+    { id: '53', name: 'NUSA TENGGARA TIMUR' },
+    { id: '61', name: 'KALIMANTAN BARAT' },
+    { id: '62', name: 'KALIMANTAN TENGAH' },
+    { id: '63', name: 'KALIMANTAN SELATAN' },
+    { id: '64', name: 'KALIMANTAN TIMUR' },
+    { id: '65', name: 'KALIMANTAN UTARA' },
+    { id: '71', name: 'SULAWESI UTARA' },
+    { id: '72', name: 'SULAWESI TENGAH' },
+    { id: '73', name: 'SULAWESI SELATAN' },
+    { id: '74', name: 'SULAWESI TENGGARA' },
+    { id: '75', name: 'GORONTALO' },
+    { id: '76', name: 'SULAWESI BARAT' },
+    { id: '81', name: 'MALUKU' },
+    { id: '82', name: 'MALUKU UTARA' },
+    { id: '91', name: 'PAPUA BARAT' },
+    { id: '92', name: 'PAPUA BARAT DAYA' },
+    { id: '94', name: 'PAPUA' },
+    { id: '95', name: 'PAPUA SELATAN' },
+    { id: '96', name: 'PAPUA TENGAH' },
+    { id: '97', name: 'PAPUA PEGUNUNGAN' }
+];
+
+function formatWilayahName(name) {
+    const specialUpper = new Set(['DKI', 'DI', 'NAD', 'NTB', 'NTT']);
+    return String(name || '')
+        .trim()
+        .split(/\s+/)
+        .map(word => {
+            const upper = word.toUpperCase();
+            if (specialUpper.has(upper)) return upper;
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join(' ');
+}
+
+async function fetchWilayahJson(url, fallback = []) {
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        return Array.isArray(data) && data.length > 0 ? data : fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+async function initWilayahDropdowns() {
+    const provinces = await fetchWilayahJson(`${WILAYAH_API_BASE}/provinces.json`, FALLBACK_PROVINCES);
+
+    document.querySelectorAll('.form-step').forEach(container => {
+        const provSelect = container.querySelector('.select-province');
+        const regSelect  = container.querySelector('.select-regency');
+        const distSelect = container.querySelector('.select-district');
+        if (!provSelect || !regSelect || !distSelect) return;
+
+        provSelect.innerHTML = '<option value="">Pilih Provinsi</option>' +
+            provinces.map(p => {
+                const label = formatWilayahName(p.name);
+                return `<option value="${label}" data-id="${p.id}">${label}</option>`;
+            }).join('');
+
+        provSelect.addEventListener('change', async function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const provId = selectedOption?.dataset?.id;
+
+            regSelect.innerHTML = '<option value="">Memuat Kabupaten / Kota...</option>';
+            regSelect.disabled = true;
+            distSelect.innerHTML = '<option value="">Pilih Kecamatan</option>';
+            distSelect.disabled = true;
+
+            if (!provId) {
+                regSelect.innerHTML = '<option value="">Pilih Kabupaten / Kota</option>';
+                return;
+            }
+
+            const regencies = await fetchWilayahJson(
+                `${WILAYAH_API_BASE}/regencies/${provId}.json`,
+                [{ id: `${provId}01`, name: `KOTA / KAB. ${selectedOption.value.toUpperCase()}` }]
+            );
+
+            regSelect.innerHTML = '<option value="">Pilih Kabupaten / Kota</option>' +
+                regencies.map(r => {
+                    const label = formatWilayahName(r.name);
+                    return `<option value="${label}" data-id="${r.id}">${label}</option>`;
+                }).join('');
+            regSelect.disabled = false;
+        });
+
+        regSelect.addEventListener('change', async function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const regId = selectedOption?.dataset?.id;
+
+            distSelect.innerHTML = '<option value="">Memuat Kecamatan...</option>';
+            distSelect.disabled = true;
+
+            if (!regId) {
+                distSelect.innerHTML = '<option value="">Pilih Kecamatan</option>';
+                return;
+            }
+
+            const districts = await fetchWilayahJson(
+                `${WILAYAH_API_BASE}/districts/${regId}.json`,
+                [{ id: `${regId}01`, name: `KECAMATAN ${selectedOption.value.toUpperCase()}` }]
+            );
+
+            distSelect.innerHTML = '<option value="">Pilih Kecamatan</option>' +
+                districts.map(d => {
+                    const label = formatWilayahName(d.name);
+                    return `<option value="${label}" data-id="${d.id}">${label}</option>`;
+                }).join('');
+            distSelect.disabled = false;
+        });
+    });
+
+    document.querySelectorAll('input[name="postal_code"]').forEach(input => {
+        input.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 5);
+        });
+    });
+}
+
+// ====================================
 // INITIALIZE ON LOAD
 // ====================================
 window.addEventListener('DOMContentLoaded', function () {
+    initWilayahDropdowns();
     // Add animation keyframes
     const style = document.createElement('style');
     style.textContent = `

@@ -267,7 +267,7 @@
                         </div>
                         <div class="input-group ef-display-group">
                             <label class="input-label">Faktor Emisi</label>
-                            <div class="ef-chip">0,80 kgCO₂e/kWh<br><small>Grid Jawa-Bali</small></div>
+                            <div class="ef-chip">0,85 kgCO₂e/kWh<br><small>Rata-rata Nasional PLN</small></div>
                         </div>
                     </div>
 
@@ -324,7 +324,9 @@
                                     <label class="input-label">Moda Transportasi</label>
                                     <select class="input-field select-field" name="p_transit_mode[]" onchange="updateTransitModeFields(this); updateEfChip(this,'p_transit'); calcLive()">
                                         <option value="">-- Pilih Moda --</option>
+                                        <option value="bus">Bus</option>
                                         <option value="train">Kereta</option>
+                                        <option value="ojol">Ojek Online (Ojol)</option>
                                         <option value="plane">Pesawat</option>
                                     </select>
                                 </div>
@@ -559,7 +561,7 @@
                         </div>
                         <div class="input-group ef-display-group">
                             <label class="input-label">Faktor Emisi</label>
-                            <div class="ef-chip" data-ef-group="p_water">—</div>
+                            <div class="ef-chip">0,149 kgCO₂e/m³</div>
                         </div>
                     </div>
                     <div class="scope-preview">
@@ -597,7 +599,7 @@
                         </div>
                         <div class="input-group ef-display-group">
                             <label class="input-label">Faktor Emisi</label>
-                            <div class="ef-chip" data-ef-group="p_waste">—</div>
+                            <div class="ef-chip">0,4 kgCO₂e/kg</div>
                         </div>
                     </div>
                     <div class="scope-preview">
@@ -706,22 +708,23 @@
                                             <option value="solar_cn51">Minyak Solar CN51</option>
                                             <option value="solar_cn48">Minyak Solar CN48</option>
                                             <option value="diesel">Minyak Diesel</option>
+                                            <option value="minyakbakar">Minyak Bakar (MFO/HFO)</option>
                                             <option value="ron98">Bensin RON98</option>
                                             <option value="ron92">Bensin RON92</option>
                                             <option value="ron90">Bensin RON90</option>
                                             <option value="ron88">Bensin RON88</option>
-                                            <option value="lpg">LPG (Liquid Petroleum Gas)</option>
-                                            <option value="coal_bit">Batubara (Coal)</option>
-                                            <option value="natgas">Gas Alam</option>
-                                            <option value="avtur">Avtur</option>
                                             <option value="kerosene">Minyak Tanah</option>
+                                            <option value="lpg">LPG (Liquid Petroleum Gas)</option>
+                                            <option value="natgas">Gas Alam</option>
+                                            <option value="cng">CNG (Compressed Natural Gas)</option>
+                                            <option value="coal_bit">Batubara (Coal)</option>
                                         </select>
                                     </div>
                                     <div class="input-group">
                                         <label class="input-label">Konsumsi Bahan Bakar</label>
                                         <div class="input-with-unit">
                                             <input type="number" class="input-field" name="c_stat_qty[]" placeholder="0" min="0" step="0.01" oninput="calcLive()">
-                                            <span class="input-unit unit-stat">Nm³</span>
+                                            <span class="input-unit unit-stat">Liter/thn</span>
                                         </div>
                                     </div>
                                     <div class="input-group ef-display-group">
@@ -895,12 +898,23 @@
 
                     <div class="ref-info-bar">
                         <i class="fas fa-info-circle"></i>
-                        <span>Faktor Emisi Listrik PLN Grid Jawa-Bali</span>
+                        <span>Faktor Emisi Listrik PLN Sesuai Wilayah Grid</span>
                     </div>
 
                     <div id="rows_c_elec">
                         <div class="entry-row" data-group="c_elec">
                             <div class="entry-fields">
+                                <div class="input-group">
+                                    <label class="input-label">Sumber Listrik (Grid Wilayah)</label>
+                                    <select class="input-field select-field" name="c_elec_src[]" onchange="updateEfChip(this,'c_elec'); calcLive()">
+                                        <option value="">-- Pilih Grid PLN --</option>
+                                        <option value="jawa_bali">Listrik PLN (Grid Jawa-Bali)</option>
+                                        <option value="sumatera">Listrik PLN (Grid Sumatera)</option>
+                                        <option value="kalimantan">Listrik PLN (Grid Kalimantan)</option>
+                                        <option value="sulawesi">Listrik PLN (Grid Sulawesi)</option>
+                                        <option value="papua">Listrik PLN (Grid Maluku &amp; Papua)</option>
+                                    </select>
+                                </div>
                                 <div class="input-group">
                                     <label class="input-label">Jumlah Pemakaian</label>
                                     <div class="input-with-unit">
@@ -1110,7 +1124,16 @@
                                             <option value="">-- Pilih Kelas --</option>
                                             <option value="ekonomi">Ekonomi</option>
                                             <option value="bisnis">Bisnis</option>
+                                            <option value="eksekutif">Eksekutif</option>
+                                            <option value="panoramic">Panoramic</option>
+                                            <option value="luxury">Luxury</option>
+                                            <option value="priority">Priority</option>
+                                            <option value="compartment">Compartment</option>
                                         </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label class="input-label">Jumlah Pax</label>
+                                        <input type="number" class="input-field" name="c_train_pax[]" placeholder="1" min="0" step="1" oninput="calcLive()">
                                     </div>
                                     <div class="input-group">
                                         <label class="input-label">Jarak Tempuh</label>

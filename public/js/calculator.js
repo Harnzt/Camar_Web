@@ -18,7 +18,9 @@ const EF_DB = {
         avtur:        { ef: 72.36, unit: 'Ton CO2/TJ',  ref: '' },
         kerosene:     { ef: 72.43, unit: 'Ton CO2/TJ',  ref: '' },
         coal:         { ef: 99.718, unit: 'kgCO₂e/GJ', ref: '' },
+        coal_bit:     { ef: 99.718, unit: 'kgCO₂e/GJ', ref: '' },
         naturalgas:   { ef: 57.600, unit: 'kgCO₂e/GJ', ref: '' },
+        natgas:       { ef: 57.600, unit: 'kgCO₂e/GJ', ref: '' },
         minyakbakar:   { ef: 77.90, unit: 'Ton CO2/TJ', ref: '' },
         // Distance-based (kgCO₂e/km) — IPCC 2006 Vol.2 T3.2.2
         car_petrol:   { ef: 0.210, unit: 'kgCO₂e/km', ref: '' },
@@ -27,11 +29,16 @@ const EF_DB = {
     },
 
     // ── LISTRIK PLN (kgCO₂e/kWh) ─────────────────────────────────────────────
-    // Sumber: MEMR Permen 10/2022 
+    // Sumber: Kementerian ESDM (Ditjen Ketenagalistrikan)
     grid: {
-        jawa_bali:   { ef: 0.80, display: '0,80', unit: 'kgCO₂e/kWh', ref: 'Grid Jawa-Bali' },
-        // Household (per kWh)
-        household:   { ef: 0.80, display: '0,80', unit: 'kgCO₂e/kWh', ref: 'Grid Jawa-Bali' },
+        jawa_bali:   { ef: 0.8099, display: '0,8099', unit: 'kgCO₂e/kWh', ref: 'Grid Jawa-Bali' },
+        sumatera:    { ef: 0.8790, display: '0,8790', unit: 'kgCO₂e/kWh', ref: 'Grid Sumatera' },
+        sumatra:     { ef: 0.8790, display: '0,8790', unit: 'kgCO₂e/kWh', ref: 'Grid Sumatera' },
+        kalimantan:  { ef: 1.0460, display: '1,0460', unit: 'kgCO₂e/kWh', ref: 'Grid Kalimantan' },
+        sulawesi:    { ef: 0.8450, display: '0,8450', unit: 'kgCO₂e/kWh', ref: 'Grid Sulawesi' },
+        papua:       { ef: 0.6600, display: '0,6600', unit: 'kgCO₂e/kWh', ref: 'Grid Maluku & Papua' },
+        // Household / Individu (Rata-rata Nasional PLN per kWh)
+        household:   { ef: 0.85,   display: '0,85',   unit: 'kgCO₂e/kWh', ref: 'Rata-rata Nasional PLN' },
     },
 
     // ── TRANSPORTASI PENUMPANG (kgCO₂e/pax·km) ───────────────────────────────
@@ -41,6 +48,7 @@ const EF_DB = {
         flight_int_long:  { ef: 0.1950, unit: 'kgCO₂e/pax·km', ref: 'Intl >3700km' },
         train:            { ef: 0.0370, unit: 'kgCO₂e/pax·km', ref: '' },
         bus:              { ef: 0.0890, unit: 'kgCO₂e/pax·km', ref: '' },
+        ojol:             { ef: 0.1130, unit: 'kgCO₂e/pax·km', ref: 'Ojek Online' },
         // Flight class multipliers for company (base = economy pax·km)
         economy:  { ef: 1, unit: 'kgCO₂e/pax·km', ref: 'Economy class' },
         business: { ef: 1.5, unit: 'kgCO₂e/pax·km', ref: ' Business class (2× economy)' },
@@ -51,6 +59,11 @@ const EF_DB = {
     train: {
         ekonomi:     { ef: 0.01219, unit: 'kgCO₂e/pax·km', ref: 'KAI' },
         bisnis:      { ef: 0.01308, unit: 'kgCO₂e/pax·km', ref: 'KAI' },
+        eksekutif:   { ef: 0.01750, unit: 'kgCO₂e/pax·km', ref: 'KAI' },
+        panoramic:   { ef: 0.02469, unit: 'kgCO₂e/pax·km', ref: 'KAI' },
+        luxury:      { ef: 0.02804, unit: 'kgCO₂e/pax·km', ref: 'KAI' },
+        priority:    { ef: 0.03044, unit: 'kgCO₂e/pax·km', ref: 'KAI' },
+        compartment: { ef: 0.04390, unit: 'kgCO₂e/pax·km', ref: 'KAI' },
     },
 
     // ── HOTEL (kgCO₂e/kamar·malam) ───────────────────────────────────────────
@@ -66,6 +79,7 @@ const EF_DB = {
         egg:     { ef:  8.4, unit: 'kgCO₂e/kg', ref: '' },
         fruits:  { ef:  2.9, unit: 'kgCO₂e/kg', ref: '' },
         milk:    { ef:  4.8, unit: 'kgCO₂e/kg', ref: '' },
+        dairy:   { ef:  4.8, unit: 'kgCO₂e/kg', ref: '' },
     },
 
     // ── SAMPAH & AIR ──────────────────────────────────────────────────────────
@@ -75,9 +89,9 @@ const EF_DB = {
 
     // ── KENDARAAN PRIBADI (distance-based, kgCO₂e/km) ────────────────────────
     vehicle: {
-        car_petrol: { ron98: 68.91, ron92: 69.04, ron90: 69.29, ron88: 69.67},
-        car_diesel: { ron98: 68.91, ron92: 69.04, ron90: 69.29, ron88: 69.67, diesel: 74.52 },
-        motorcycle: { ron98: 68.91, ron92: 69.04, ron90: 69.29, ron88: 69.67,  },
+        car_petrol: { ron98: 68.91, ron92: 69.04, ron90: 69.29, ron88: 69.67, listrik: 0 },
+        car_diesel: { ron98: 68.91, ron92: 69.04, ron90: 69.29, ron88: 69.67, diesel: 74.52, listrik: 0 },
+        motorcycle: { ron98: 68.91, ron92: 69.04, ron90: 69.29, ron88: 69.67, listrik: 0 },
     },
 };
 
@@ -560,6 +574,7 @@ function addRow(group) {
     newRow.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
     newRow.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
     newRow.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
+    newRow.querySelectorAll('.unit-stat').forEach(u => u.textContent = 'Liter/thn');
 
     container.appendChild(newRow);
     updateTransitModeFields(newRow);
@@ -575,6 +590,7 @@ function removeRow(btn) {
         row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
         row.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
         row.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
+        row.querySelectorAll('.unit-stat').forEach(u => u.textContent = 'Liter/thn');
         updateTransitModeFields(row);
     } else {
         row.remove();
@@ -586,20 +602,41 @@ function removeRow(btn) {
 // EF CHIP UPDATER
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function getStationaryFuelUnit(fuelKey) {
+    if (['lpg', 'coal', 'coal_bit'].includes(fuelKey)) return 'kg/thn';
+    if (['natgas', 'naturalgas', 'cng'].includes(fuelKey)) return 'Nm³/thn';
+    return 'Liter/thn';
+}
+
 function updateEfChip(selectEl, group) {
     const val  = selectEl.value;
     const row  = selectEl.closest('.entry-row');
+    if (group === 'c_stat') {
+        const unitStat = row?.querySelector('.unit-stat');
+        if (unitStat) unitStat.textContent = getStationaryFuelUnit(val);
+    }
     const chip = row?.querySelector(`.ef-chip[data-ef-group="${group}"]`);
     if (!chip) return;
 
     let efData = null;
 
     if (['c_stat','c_mobile_fuel'].includes(group)) efData = getFuelEF(val);
-    else if (group === 'c_mobile_dist')              efData = getFuelEF(val);
+    else if (group === 'c_mobile_dist') {
+        const distEf = ['solar_cn53','solar_cn51','solar_cn48','diesel'].includes(val)
+            ? 0.270
+            : (['ron98','ron92','ron90','ron88'].includes(val) ? 0.210 : null);
+        if (distEf !== null) efData = { ef: distEf, unit: 'kgCO₂e/km', ref: '' };
+    }
     else if (group === 'c_elec')                     efData = getGridEF(val);
     else if (group === 'c_flight')                   efData = EF_DB.transit[val] || null;
     else if (group === 'c_train')                    efData = getTrainEF(val);
     else if (group === 'p_energy')                   efData = getFuelEF(val);
+    else if (group === 'p_vehicle') {
+        const vType = row?.querySelector('[name="p_vehicle_type[]"]')?.value;
+        const vFuel = row?.querySelector('[name="p_vehicle_fuel[]"]')?.value;
+        const vEf = EF_DB.vehicle[vType]?.[vFuel];
+        if (vEf !== undefined) efData = { ef: vEf, unit: 'Ton CO2/TJ', ref: '' };
+    }
     else if (group === 'p_food')                     efData = getFoodEF(val);
     else if (group === 'p_flight')                   efData = getTransitEF(val);
     else if (group === 'p_transit') {
@@ -752,7 +789,7 @@ function calcCompanyAll() {
     let mobileDist = 0;
     rowPairs('c_mobile_dist_fuel','c_mobile_dist_km').forEach(([fuel, km]) => {
         let ef_km = 0;
-        if (['solar_cn53','solar_cn51','solar_cn48','diesel'].includes(fuel)) ef_km = 74.52;
+        if (['solar_cn53','solar_cn51','solar_cn48','diesel'].includes(fuel)) ef_km = 0.270;
         else if (['ron98','ron92','ron90','ron88'].includes(fuel)) ef_km = 0.210;
         mobileDist += km * ef_km;
     });
@@ -777,9 +814,9 @@ function calcCompanyAll() {
     });
 
     let train = 0;
-    rowPairs('c_train_class','c_train_km').forEach(([cls, km]) => {
+    rowTriples('c_train_class','c_train_pax','c_train_km').forEach(([cls, pax, km]) => {
         const ef = getTrainEF(cls);
-        if (ef) train += km * ef.ef;
+        if (ef) train += pax * km * ef.ef;
     });
 
     return { stat, mobile, elec, flight, hotel, train };
@@ -817,7 +854,7 @@ function buildScopeDetails(mode) {
             if (factor !== undefined) add('scope1', selectText(typeEl), `Bahan bakar: ${selectText(fuelEl)}`, km, 'km / bulan', factor, km * factor);
         });
         const kwh = num(document.getElementById('p_elec_kwh'));
-        add('scope2', 'Listrik rumah tangga (Grid Jawa-Bali)', 'Listrik', kwh, 'kWh/bulan', EF_DB.grid.household.ef, kwh * EF_DB.grid.household.ef);
+        add('scope2', 'Listrik rumah tangga (Rata-rata Nasional PLN)', 'Listrik', kwh, 'kWh/bulan', EF_DB.grid.household.ef, kwh * EF_DB.grid.household.ef);
         document.querySelectorAll('[data-group="p_transit"]').forEach(row => {
             const modeEl = row.querySelector('[name="p_transit_mode[]"]');
             const modeValue = modeEl?.value;
@@ -841,10 +878,10 @@ function buildScopeDetails(mode) {
             const ef = getFoodEF(typeEl?.value);
             if (ef) add('scope3', 'Konsumsi makanan', selectText(typeEl), qty, 'kg / bulan', ef.ef, qty * ef.ef);
         });
-        const water = num(document.getElementById('p_water_m3'));
-        add('scope3', 'Penggunaan air', 'Air', water, 'm³ / bulan', EF_DB.water.ef, water * EF_DB.water.ef);
-        const waste = num(document.getElementById('p_waste_kg'));
-        add('scope3', 'Pengelolaan limbah', 'Sampah', waste, 'kg / bulan', EF_DB.waste.ef, waste * EF_DB.waste.ef);
+        const water = num(document.getElementById('p_water_m3')) * 12;
+        add('scope3', 'Penggunaan air', 'Air', water, 'm³ / tahun', EF_DB.water.ef, water * EF_DB.water.ef);
+        const waste = num(document.getElementById('p_waste_kg')) * 12;
+        add('scope3', 'Pengelolaan limbah', 'Sampah', waste, 'kg / tahun', EF_DB.waste.ef, waste * EF_DB.waste.ef);
     } else {
         document.querySelectorAll('[data-group="c_stat"]').forEach(row => {
             const fuelEl = row.querySelector('[name="c_stat_fuel[]"]'), qty = num(row.querySelector('[name="c_stat_qty[]"]'));
@@ -865,7 +902,7 @@ function buildScopeDetails(mode) {
         document.querySelectorAll('[data-group="c_elec"]').forEach(row => {
             const srcEl = row.querySelector('[name="c_elec_src[]"]'), qty = num(row.querySelector('[name="c_elec_kwh[]"]'));
             const ef = getGridEF(srcEl?.value);
-            if (ef) add('scope2', 'Konsumsi listrik', selectText(srcEl), qty, 'kWh / bulan', ef.ef, qty * ef.ef);
+            if (ef) add('scope2', 'Konsumsi listrik', selectText(srcEl), qty, 'kWh / tahun', ef.ef, qty * ef.ef);
         });
         document.querySelectorAll('[data-group="c_flight"]').forEach(row => {
             const clsEl = row.querySelector('[name="c_flight_class[]"]'), pax = num(row.querySelector('[name="c_flight_pax[]"]')), km = num(row.querySelector('[name="c_flight_km[]"]'));
@@ -877,9 +914,12 @@ function buildScopeDetails(mode) {
             add('scope3', 'Akomodasi hotel', `${rooms} kamar × ${nights} malam`, qty, 'kamar-malam / bulan', EF_DB.hotel.ef, qty * EF_DB.hotel.ef);
         });
         document.querySelectorAll('[data-group="c_train"]').forEach(row => {
-            const clsEl = row.querySelector('[name="c_train_class[]"]'), km = num(row.querySelector('[name="c_train_km[]"]'));
+            const clsEl = row.querySelector('[name="c_train_class[]"]'), pax = num(row.querySelector('[name="c_train_pax[]"]')), km = num(row.querySelector('[name="c_train_km[]"]'));
             const ef = getTrainEF(clsEl?.value);
-            if (ef) add('scope3', 'Perjalanan kereta', selectText(clsEl), km, 'penumpang-km / bulan', ef.ef, km * ef.ef);
+            if (ef) add('scope3', 'Perjalanan kereta', `${selectText(clsEl)}; ${pax} penumpang`, km * pax, 'penumpang-km / tahun', ef.ef, km * pax * ef.ef, {
+                passengers: pax,
+                distance_km: km,
+            });
         });
     }
     return scopes;
@@ -1155,6 +1195,7 @@ function resetCalculator() {
     });
     document.querySelectorAll('.flight-distance-hint').forEach(h => h.textContent = 'Pilih asal dan tujuan bandara');
     document.querySelectorAll('.ef-chip[data-ef-group]').forEach(c => c.textContent = '—');
+    document.querySelectorAll('.unit-stat').forEach(u => u.textContent = 'Liter/thn');
     document.querySelectorAll('.preview-value').forEach(el => el.textContent = '0');
     updateAllTransitModeFields();
 
@@ -1205,8 +1246,8 @@ window.saveCalculationToDatabase = function(e) {
             total_kg: totalKg,
             details: {
                 electricity: v('p_elec_kwh') * EF_DB.grid.household.ef,
-                water: v('p_water_m3') * EF_DB.water.ef,
-                waste: v('p_waste_kg') * EF_DB.waste.ef
+                water: v('p_water_m3') * 12 * EF_DB.water.ef,
+                waste: v('p_waste_kg') * 12 * EF_DB.waste.ef
             }
         };
     }

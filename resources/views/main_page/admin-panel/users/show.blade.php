@@ -15,9 +15,19 @@
             <div><dt>Role</dt><dd>{{ $user->role_label }}</dd></div>
             <div><dt>Kategori</dt><dd>{{ $user->category_label }}</dd></div>
             <div><dt>Telepon</dt><dd>{{ $user->phone ?? '-' }}</dd></div>
-            <div><dt>Perusahaan</dt><dd>{{ $user->company_name ?? '-' }}</dd></div>
-            <div><dt>Industri</dt><dd>{{ $user->industry ?? '-' }}</dd></div>
-            <div><dt>Alamat</dt><dd>{{ $user->address ?? '-' }}</dd></div>
+            @if($user->isPersonal())
+                <div><dt>Pekerjaan</dt><dd>{{ $user->job_title ?? '-' }}</dd></div>
+            @else
+                <div><dt>Perusahaan</dt><dd>{{ $user->company_name ?? '-' }}</dd></div>
+                <div><dt>Industri</dt><dd>{{ $user->industry ?? '-' }}</dd></div>
+                <div><dt>Jabatan PIC</dt><dd>{{ $user->position ?? '-' }}</dd></div>
+            @endif
+            <div><dt>Negara</dt><dd>{{ $user->country ?? '-' }}</dd></div>
+            <div><dt>Provinsi</dt><dd>{{ $user->province ?? '-' }}</dd></div>
+            <div><dt>Kabupaten / Kota</dt><dd>{{ $user->regency ?? '-' }}</dd></div>
+            <div><dt>Kecamatan</dt><dd>{{ $user->district ?? '-' }}</dd></div>
+            <div><dt>Kode Pos</dt><dd>{{ $user->postal_code ?? '-' }}</dd></div>
+            <div><dt>Alamat Lengkap</dt><dd>{{ $user->address ?? '-' }}</dd></div>
         </dl>
     </section>
 

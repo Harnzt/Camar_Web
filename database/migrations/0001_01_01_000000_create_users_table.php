@@ -28,6 +28,11 @@ return new class extends Migration
             $table->string('email')->unique();              // Email utama login
             $table->string('password');
             $table->string('phone', 30)->nullable();
+            $table->string('country', 100)->nullable();
+            $table->string('province', 100)->nullable();
+            $table->string('regency', 100)->nullable();
+            $table->string('district', 100)->nullable();
+            $table->string('postal_code', 10)->nullable();
             $table->text('address')->nullable();
 
             // ------------------------------------------------

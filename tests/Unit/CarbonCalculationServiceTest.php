@@ -27,10 +27,10 @@ test('personal calculation covers household account scopes', function () {
     ]);
 
     expect($result['mode'])->toBe('personal')
-        ->and(round($result['scope1_kg'], 2))->toBe(1650.0)
-        ->and(round($result['scope2_kg'], 2))->toBe(971.88)
-        ->and(round($result['scope3_kg'], 2))->toBe(724.18)
-        ->and(round($result['total_kg'], 2))->toBe(3346.06)
+        ->and(round($result['scope1_kg'], 2))->toBe(35174.1)
+        ->and(round($result['scope2_kg'], 2))->toBe(85.0)
+        ->and(round($result['scope3_kg'], 2))->toBe(5065.18)
+        ->and(round($result['total_kg'], 2))->toBe(40324.28)
         ->and($result['scope_details']['scope3'][0]['transport_mode'])->toBe('train')
         ->and($result['scope_details']['scope3'][0]['distance_km'])->toBe(100.0);
 });
@@ -45,7 +45,7 @@ test('company calculation covers scope one two and three', function () {
         'mobile_fuel_qty' => 100,
         'mobile_distance_fuel' => 'diesel',
         'mobile_km' => 1000,
-        'electricity_grid' => 'sumatra',
+        'electricity_grid' => 'sumatera',
         'electricity_kwh' => 1000,
         'flight_class' => 'economy',
         'flight_pax' => 2,
@@ -57,10 +57,10 @@ test('company calculation covers scope one two and three', function () {
     ]);
 
     expect($result['mode'])->toBe('company')
-        ->and(round($result['scope1_kg'], 2))->toBe(3279.5)
+        ->and(round($result['scope1_kg'], 2))->toBe(81694.0)
         ->and(round($result['scope2_kg'], 2))->toBe(879.0)
-        ->and(round($result['scope3_kg'], 2))->toBe(574.41)
-        ->and(round($result['total_kg'], 2))->toBe(4732.91);
+        ->and(round($result['scope3_kg'], 2))->toBe(2308.41)
+        ->and(round($result['total_kg'], 2))->toBe(84881.41);
 });
 
 test('company flight distance and emission match calculator route formula', function () {
@@ -110,8 +110,8 @@ test('company flight distance and emission match calculator route formula', func
     ]);
 
     expect($result['details']['flight_km'])->toBe(982.61)
-        ->and(round($result['details']['flight'], 2))->toBe(261.37)
-        ->and(round($result['scope3_kg'], 2))->toBe(261.37)
+        ->and(round($result['details']['flight'], 2))->toBe(1965.22)
+        ->and(round($result['scope3_kg'], 2))->toBe(1965.22)
         ->and($result['scope_details']['scope3'][0]['origin'])->toBe('CGK')
         ->and($result['scope_details']['scope3'][0]['destination'])->toBe('DPS');
 });

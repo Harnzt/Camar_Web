@@ -125,11 +125,6 @@
                         </select>
                     </div>
 
-                    <div class="form-group full-width">
-                        <label><i class="fas fa-map-marker-alt"></i> Alamat Perusahaan <span class="required">*</span></label>
-                        <textarea name="address" rows="3" placeholder="Alamat lengkap perusahaan" required></textarea>
-                    </div>
-
                     <div class="form-group">
                         <label><i class="fas fa-user"></i> Nama PIC / Penanggung Jawab <span class="required">*</span></label>
                         <input type="text" name="full_name" placeholder="Nama lengkap Anda" required>
@@ -138,6 +133,44 @@
                     <div class="form-group">
                         <label><i class="fas fa-briefcase"></i> Jabatan <span class="required">*</span></label>
                         <input type="text" name="position" placeholder="CEO, Manager, dll" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-globe-asia"></i> Negara <span class="required">*</span></label>
+                        <select name="country" class="select-country" required>
+                            <option value="Indonesia" selected>Indonesia</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-map"></i> Provinsi <span class="required">*</span></label>
+                        <select name="province" class="select-province" required>
+                            <option value="">Pilih Provinsi</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-city"></i> Kabupaten / Kota <span class="required">*</span></label>
+                        <select name="regency" class="select-regency" required disabled>
+                            <option value="">Pilih Kabupaten / Kota</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-map-signs"></i> Kecamatan <span class="required">*</span></label>
+                        <select name="district" class="select-district" required disabled>
+                            <option value="">Pilih Kecamatan</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label><i class="fas fa-mail-bulk"></i> Kode Pos <span class="required">*</span></label>
+                        <input type="text" name="postal_code" placeholder="Contoh: 12345" maxlength="5" inputmode="numeric" pattern="[0-9]{5}" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label><i class="fas fa-map-marker-alt"></i> Alamat Lengkap Perusahaan <span class="required">*</span></label>
+                        <textarea name="address" rows="3" placeholder="Nama jalan, nomor gedung, RT/RW, kelurahan/desa" required></textarea>
                     </div>
 
                     <div class="form-group">
@@ -188,12 +221,59 @@
 
                     <div class="form-group">
                         <label><i class="fas fa-briefcase"></i> Pekerjaan <span class="required">*</span></label>
-                        <input type="text" name="job_title" placeholder="Freelancer / PNS / Lainnya" required>
+                        <select name="job_title" required>
+                            <option value="">Pilih Pekerjaan</option>
+                            <option value="Pegawai Negeri Sipil (PNS) / ASN">Pegawai Negeri Sipil (PNS) / ASN</option>
+                            <option value="Karyawan Swasta">Karyawan Swasta</option>
+                            <option value="Karyawan BUMN / BUMD">Karyawan BUMN / BUMD</option>
+                            <option value="Wiraswasta / Pengusaha">Wiraswasta / Pengusaha</option>
+                            <option value="Freelancer / Pekerja Lepas">Freelancer / Pekerja Lepas</option>
+                            <option value="Profesional (Dokter, Pengacara, Konsultan, dll.)">Profesional (Dokter, Pengacara, Konsultan, dll.)</option>
+                            <option value="Pendidik (Guru / Dosen / Peneliti)">Pendidik (Guru / Dosen / Peneliti)</option>
+                            <option value="TNI / Polri">TNI / Polri</option>
+                            <option value="Pelajar / Mahasiswa">Pelajar / Mahasiswa</option>
+                            <option value="Ibu Rumah Tangga">Ibu Rumah Tangga</option>
+                            <option value="Pensiunan">Pensiunan</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-globe-asia"></i> Negara <span class="required">*</span></label>
+                        <select name="country" class="select-country" required>
+                            <option value="Indonesia" selected>Indonesia</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-map"></i> Provinsi <span class="required">*</span></label>
+                        <select name="province" class="select-province" required>
+                            <option value="">Pilih Provinsi</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-city"></i> Kabupaten / Kota <span class="required">*</span></label>
+                        <select name="regency" class="select-regency" required disabled>
+                            <option value="">Pilih Kabupaten / Kota</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-map-signs"></i> Kecamatan <span class="required">*</span></label>
+                        <select name="district" class="select-district" required disabled>
+                            <option value="">Pilih Kecamatan</option>
+                        </select>
                     </div>
 
                     <div class="form-group full-width">
-                        <label><i class="fas fa-map-marker-alt"></i> Alamat <span class="required">*</span></label>
-                        <textarea name="address" rows="3" placeholder="Alamat lengkap Anda" required></textarea>
+                        <label><i class="fas fa-mail-bulk"></i> Kode Pos <span class="required">*</span></label>
+                        <input type="text" name="postal_code" placeholder="Contoh: 12345" maxlength="5" inputmode="numeric" pattern="[0-9]{5}" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label><i class="fas fa-map-marker-alt"></i> Alamat Lengkap <span class="required">*</span></label>
+                        <textarea name="address" rows="3" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan/desa" required></textarea>
                     </div>
 
                     <div class="form-group">

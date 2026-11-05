@@ -6,7 +6,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Validation\Rules\Password;
 use App\Http\Controllers\CartController;
 use App\Models\DocumentVerification;
@@ -17,6 +19,12 @@ class AuthController extends Controller
     // REGISTER — Show Form
     public function showRegister()
     {
+        try {
+            $this->ensureUserRegionColumnsExist();
+        } catch (\Throwable) {
+            // Abaikan jika koneksi DB belum aktif saat render form
+        }
+
         return view('main_page.register.register');
     }
 
@@ -31,6 +39,11 @@ class AuthController extends Controller
             'account_category' => 'required|in:company,personal',
             'password'         => ['required', 'min:8'],
             'confirm_password' => 'required|same:password',
+            'country'          => 'required|string|max:100',
+            'province'         => 'required|string|max:100',
+            'regency'          => 'required|string|max:100',
+            'district'         => 'required|string|max:100',
+            'postal_code'      => 'required|digits:5',
             'address'          => 'required|string|max:500',
             'phone'            => 'required|string|max:20',
             'email'            => 'required|email|unique:users,email',
@@ -58,10 +71,10 @@ class AuthController extends Controller
         } else {
             // personal
             $categoryRules = [
-                'name'  => 'required|string|max:50',
+                'name'      => 'required|string|max:50',
                 // 'email' => 'required|email|unique:users,email',
-                'npwp'  => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
-                'job_title' => 'required|string|max:50',
+                'npwp'      => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+                'job_title' => 'required|string|max:100',
             ];
         }
 
@@ -73,6 +86,8 @@ class AuthController extends Controller
         // ----------------------------------------------------------
         // 4. SIMPAN USER
         // ----------------------------------------------------------
+        $this->ensureUserRegionColumnsExist();
+
         $user = new User();
 
         // Field berdasarkan category
@@ -87,13 +102,27 @@ class AuthController extends Controller
             $user->job_title = $request->job_title;
         }
 
+        $formattedAddress = implode(', ', array_filter([
+            trim((string) $request->input('address')),
+            $request->filled('district') ? 'Kec. ' . trim((string) $request->input('district')) : null,
+            trim((string) $request->input('regency')),
+            $request->filled('province') ? 'Prov. ' . trim((string) $request->input('province')) : null,
+            trim((string) $request->input('country', 'Indonesia'))
+                . ($request->filled('postal_code') ? ' ' . trim((string) $request->input('postal_code')) : ''),
+        ]));
+
         // Field bersama
-        $user->email     = $request->email;
+        $user->email            = $request->email;
         $user->password         = Hash::make($request->password);
         $user->role             = $role;
         $user->account_category = $category;
         $user->phone            = $request->phone;
-        $user->address          = $request->address;
+        $user->country          = $request->country;
+        $user->province         = $request->province;
+        $user->regency          = $request->regency;
+        $user->district         = $request->district;
+        $user->postal_code      = $request->postal_code;
+        $user->address          = $formattedAddress;
         $user->status           = 'pending'; // Akun menunggu verifikasi admin
 
         // ----------------------------------------------------------
@@ -277,5 +306,30 @@ class AuthController extends Controller
         Storage::disk('public')->put($path, $decoded);
 
         return $path;
+    }
+
+    private function ensureUserRegionColumnsExist(): void
+    {
+        if (Schema::hasColumn('users', 'country') && Schema::hasColumn('users', 'postal_code')) {
+            return;
+        }
+
+        Schema::table('users', function (Blueprint $table) {
+            if (! Schema::hasColumn('users', 'country')) {
+                $table->string('country', 100)->nullable()->after('phone');
+            }
+            if (! Schema::hasColumn('users', 'province')) {
+                $table->string('province', 100)->nullable()->after('country');
+            }
+            if (! Schema::hasColumn('users', 'regency')) {
+                $table->string('regency', 100)->nullable()->after('province');
+            }
+            if (! Schema::hasColumn('users', 'district')) {
+                $table->string('district', 100)->nullable()->after('regency');
+            }
+            if (! Schema::hasColumn('users', 'postal_code')) {
+                $table->string('postal_code', 10)->nullable()->after('district');
+            }
+        });
     }
 }

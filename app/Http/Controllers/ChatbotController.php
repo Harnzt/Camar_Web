@@ -92,6 +92,8 @@ class ChatbotController extends Controller
             $senderId .= '_'.$conversationId;
         }
 
+        $rasaMessage = $this->normalizeUserCalculationInput($userMessage);
+
         try {
             $response = Http::acceptJson()
                 ->asJson()
@@ -99,7 +101,7 @@ class ChatbotController extends Controller
                 ->timeout(20)
                 ->post(config('services.rasa.webhook_url'), [
                     'sender' => $senderId,
-                    'message' => $userMessage,
+                    'message' => $rasaMessage,
                     'metadata' => [
                         'authenticated' => (bool) $user,
                         'role' => $user?->role,
@@ -150,6 +152,10 @@ class ChatbotController extends Controller
                 && is_array($message)
                 && ($message['text'] ?? null) === 'Data aktivitas sudah lengkap dan siap dihitung oleh CAMAR.')
             ->map(function ($message) use ($user, $userMessage) {
+                if (is_array($message)) {
+                    $message = $this->normalizePromptButtons($message);
+                }
+
                 $custom = is_array($message) ? ($message['custom'] ?? null) : null;
                 if (is_array($custom) && ($custom['type'] ?? null) === 'project_recommendation_request') {
                     return $this->completeRecommendation($message, $user);
@@ -220,6 +226,126 @@ class ChatbotController extends Controller
 
                 return $message;
             })->values()->all();
+    }
+
+    private function normalizePromptButtons(array $message): array
+    {
+        $text = trim((string) ($message['text'] ?? ''));
+        if ($text === '') {
+            return $message;
+        }
+
+        if (str_contains($text, 'pilih bahan bakar untuk pembakaran stasioner perusahaan')) {
+            $message['buttons'] = [
+                ['title' => 'Minyak Solar CN53', 'payload' => 'Minyak Solar CN53'],
+                ['title' => 'Minyak Solar CN51', 'payload' => 'Minyak Solar CN51'],
+                ['title' => 'Minyak Solar CN48', 'payload' => 'Minyak Solar CN48'],
+                ['title' => 'Minyak Diesel', 'payload' => 'Minyak Diesel'],
+                ['title' => 'Minyak Bakar (MFO/HFO)', 'payload' => 'Minyak Bakar (MFO/HFO)'],
+                ['title' => 'Bensin RON98', 'payload' => 'Bensin RON98'],
+                ['title' => 'Bensin RON92', 'payload' => 'Bensin RON92'],
+                ['title' => 'Bensin RON90', 'payload' => 'Bensin RON90'],
+                ['title' => 'Bensin RON88', 'payload' => 'Bensin RON88'],
+                ['title' => 'Minyak Tanah', 'payload' => 'Minyak Tanah'],
+                ['title' => 'LPG (Liquid Petroleum Gas)', 'payload' => 'LPG (Liquid Petroleum Gas)'],
+                ['title' => 'Gas Alam', 'payload' => 'Gas Alam'],
+                ['title' => 'CNG (Compressed Natural Gas)', 'payload' => 'CNG (Compressed Natural Gas)'],
+                ['title' => 'Batubara (Coal)', 'payload' => 'Batubara (Coal)'],
+                ['title' => 'Tidak ada', 'payload' => 'Tidak ada'],
+            ];
+        } elseif (str_contains($text, 'bagaimana kendaraan operasional akan dihitung')) {
+            $message['buttons'] = [
+                ['title' => 'Berdasarkan BBM', 'payload' => 'Berdasarkan BBM'],
+                ['title' => 'Berdasarkan jarak', 'payload' => 'Berdasarkan jarak'],
+                ['title' => 'Tidak ada', 'payload' => 'Tidak ada'],
+            ];
+        } elseif (str_contains($text, 'Pilih bahan bakar kendaraan operasional')) {
+            $message['buttons'] = [
+                ['title' => 'Minyak Solar CN53', 'payload' => 'Minyak Solar CN53'],
+                ['title' => 'Minyak Solar CN51', 'payload' => 'Minyak Solar CN51'],
+                ['title' => 'Minyak Solar CN48', 'payload' => 'Minyak Solar CN48'],
+                ['title' => 'Minyak Diesel', 'payload' => 'Minyak Diesel'],
+                ['title' => 'Bensin RON98', 'payload' => 'Bensin RON98'],
+                ['title' => 'Bensin RON92', 'payload' => 'Bensin RON92'],
+                ['title' => 'Bensin RON90', 'payload' => 'Bensin RON90'],
+                ['title' => 'Bensin RON88', 'payload' => 'Bensin RON88'],
+                ['title' => 'Avtur (Jet Kerosene)', 'payload' => 'Avtur (Jet Kerosene)'],
+            ];
+        } elseif (str_contains($text, 'Untuk perhitungan berdasarkan jarak, pilih jenis bahan bakar kendaraan')) {
+            $message['buttons'] = [
+                ['title' => 'Minyak Solar CN53', 'payload' => 'Minyak Solar CN53'],
+                ['title' => 'Minyak Solar CN51', 'payload' => 'Minyak Solar CN51'],
+                ['title' => 'Minyak Solar CN48', 'payload' => 'Minyak Solar CN48'],
+                ['title' => 'Minyak Diesel', 'payload' => 'Minyak Diesel'],
+                ['title' => 'Bensin RON98', 'payload' => 'Bensin RON98'],
+                ['title' => 'Bensin RON92', 'payload' => 'Bensin RON92'],
+                ['title' => 'Bensin RON90', 'payload' => 'Bensin RON90'],
+                ['title' => 'Bensin RON88', 'payload' => 'Bensin RON88'],
+            ];
+        } elseif (str_contains($text, 'pilih wilayah jaringan listrik atau tulis nama kota/provinsi perusahaan')) {
+            $message['buttons'] = [
+                ['title' => 'Jawa-Bali', 'payload' => 'Jawa-Bali'],
+                ['title' => 'Sumatera', 'payload' => 'Sumatera'],
+                ['title' => 'Kalimantan', 'payload' => 'Kalimantan'],
+                ['title' => 'Sulawesi', 'payload' => 'Sulawesi'],
+                ['title' => 'Maluku & Papua', 'payload' => 'Papua'],
+                ['title' => 'Lainnya', 'payload' => 'Lainnya'],
+                ['title' => 'Tidak ada', 'payload' => 'Tidak ada'],
+            ];
+        } elseif (str_contains($text, 'Pilih transportasi umum yang paling ingin dimasukkan')) {
+            $message['buttons'] = [
+                ['title' => 'Pesawat domestik', 'payload' => 'Pesawat domestik'],
+                ['title' => 'Pesawat internasional pendek', 'payload' => 'Pesawat internasional pendek'],
+                ['title' => 'Pesawat internasional panjang', 'payload' => 'Pesawat internasional panjang'],
+                ['title' => 'Kereta', 'payload' => 'Kereta'],
+                ['title' => 'Bus', 'payload' => 'Bus'],
+                ['title' => 'Ojek Online (Ojol)', 'payload' => 'Ojol'],
+                ['title' => 'Tidak ada', 'payload' => 'Tidak ada'],
+            ];
+        } elseif (str_contains($text, 'Pilih kelompok makanan yang paling ingin dimasukkan')) {
+            $message['buttons'] = [
+                ['title' => 'Beras / Nasi', 'payload' => 'Beras'],
+                ['title' => 'Sapi / kambing', 'payload' => 'Sapi'],
+                ['title' => 'Ayam', 'payload' => 'Ayam'],
+                ['title' => 'Ikan', 'payload' => 'Ikan'],
+                ['title' => 'Sayuran', 'payload' => 'Sayuran'],
+                ['title' => 'Telur', 'payload' => 'Telur'],
+                ['title' => 'Buah-buahan', 'payload' => 'Buah-buahan'],
+                ['title' => 'Susu', 'payload' => 'Susu'],
+                ['title' => 'Tidak ada', 'payload' => 'Tidak ada'],
+            ];
+        }
+
+        return $message;
+    }
+
+    private function normalizeUserCalculationInput(string $message): string
+    {
+        $key = mb_strtolower(trim($message));
+
+        $map = [
+            'berdasarkan bbm' => 'bbm',
+            'berdasarkan pemakaian bbm' => 'bbm',
+            'berdasarkan jarak' => 'jarak',
+            'berdasarkan jarak tempuh' => 'jarak',
+            'minyak solar cn53' => 'solar_cn53',
+            'minyak solar cn51' => 'solar_cn51',
+            'minyak solar cn48' => 'solar_cn48',
+            'minyak diesel' => 'diesel',
+            'minyak bakar (mfo/hfo)' => 'minyakbakar',
+            'bensin ron98' => 'ron98',
+            'bensin ron92' => 'ron92',
+            'bensin ron90' => 'ron90',
+            'bensin ron88' => 'ron88',
+            'minyak tanah' => 'kerosene',
+            'lpg (liquid petroleum gas)' => 'lpg',
+            'gas alam' => 'natgas',
+            'cng (compressed natural gas)' => 'cng',
+            'batubara (coal)' => 'coal_bit',
+            'avtur (jet kerosene)' => 'avtur',
+        ];
+
+        return $map[$key] ?? $message;
     }
 
     private function calculateTemporaryEmission(array $data): array

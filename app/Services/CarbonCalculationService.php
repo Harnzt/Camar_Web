@@ -13,18 +13,28 @@ class CarbonCalculationService
         'solar_cn53' => 72.85, 'solar_cn51' => 72.93, 'solar_cn48' => 73.28,
         'diesel' => 74.52, 'ron98' => 68.91, 'ron92' => 69.04,
         'ron90' => 69.29, 'ron88' => 69.67, 'lpg' => 65.41,
-        'avtur' => 72.36, 'kerosene' => 72.43, 'minyakbakar' => 77.90,
-        'coal' => 99.718, 'naturalgas' => 57.600
+        'cng' => 56.1, 'avtur' => 72.36, 'kerosene' => 72.43,
+        'minyakbakar' => 77.90,
+        'coal' => 99.718, 'coal_bit' => 99.718, 'coal_briket' => 99.718, 'charcoal' => 99.718,
+        'naturalgas' => 57.600, 'natgas' => 57.600, 'lng' => 57.600, 'lgv' => 65.41,
+        'wood' => 1.747,
     ];
 
     private const GRID_FACTORS = [
-        'jawa_bali' => 0.80, // Disamakan dengan calculator.js (0.80)
-        'household' => 0.80, // Disamakan dengan calculator.js (0.80)
+        'jawa_bali' => 0.8099,
+        'sumatera' => 0.8790,
+        'sumatra' => 0.8790,
+        'kalimantan' => 1.0460,
+        'sulawesi' => 0.8450,
+        'papua' => 0.6600,
+        'household' => 0.85,
     ];
 
     private const TRANSIT_FACTORS = [
         'flight_dom' => 0.1330, 'flight_int_short' => 0.1530,
         'flight_int_long' => 0.1950, 'train' => 0.0370, 'bus' => 0.0890,
+        'ojol' => 0.1130,
+        'economy' => 1.0, 'business' => 1.5, 'first' => 2.0,
     ];
 
     private const FLIGHT_FACTORS = [
@@ -38,30 +48,30 @@ class CarbonCalculationService
     ];
 
     private const FOOD_FACTORS = [
-        'beef' => 209.9, 'poultry' => 20.1, 'fish' => 26.5, 'veg' => 1.0, 
-        'rice' => 8.8, 'egg' => 8.4, 'fruits' => 2.9, 'milk' => 4.8,
+        'beef' => 209.9, 'poultry' => 20.1, 'fish' => 26.5, 'veg' => 1.0,
+        'rice' => 8.8, 'egg' => 8.4, 'fruits' => 2.9, 'milk' => 4.8, 'dairy' => 4.8,
     ];
 
     private const VEHICLE_FACTORS = [
         'car_petrol' => [
             'ron98' => 68.91, 'ron92' => 69.04, 'ron90' => 69.29,
-            'ron88' => 69.67, 
+            'ron88' => 69.67, 'listrik' => 0.0,
         ],
         'car_diesel' => [
             'ron98' => 68.91, 'ron92' => 69.04, 'ron90' => 69.29,
-            'ron88' => 69.67, 'diesel' => 74.52,
+            'ron88' => 69.67, 'diesel' => 74.52, 'listrik' => 0.0,
         ],
         'motorcycle' => [
             'ron98' => 68.91, 'ron92' => 69.04, 'ron90' => 69.29,
-            'ron88' => 69.67, 
+            'ron88' => 69.67, 'listrik' => 0.0,
         ],
     ];
 
     private const WATER_FACTOR = 0.149; // Disamakan dengan calculator.js
 
-    private const WASTE_FACTOR = 0.52;
-    
-    private const LIMBAH_FACTOR = 0.272;  
+    private const WASTE_FACTOR = 0.4; // Disamakan dengan calculator.js (0.4)
+
+    private const LIMBAH_FACTOR = 0.272;
 
     private const HOTEL_FACTOR = 49.37;
 
@@ -102,7 +112,7 @@ class CarbonCalculationService
         $energyFactor = $energyFuel === 'none' ? 0.0 : $this->factor(self::FUEL_FACTORS, $energyFuel);
         $energy = $energyFuel === 'none'
             ? 0.0
-            : $this->number($data, 'energy_qty') * 12
+            : $this->number($data, 'energy_qty')
                 * $energyFactor;
 
         $vehicleType = $this->choice($data, 'vehicle_type');
@@ -112,12 +122,12 @@ class CarbonCalculationService
             : $this->nestedFactor(self::VEHICLE_FACTORS, $vehicleType, $vehicleFuel);
         $vehicle = $vehicleType === 'none'
             ? 0.0
-            : $this->number($data, 'vehicle_km') * 12
+            : $this->number($data, 'vehicle_km')
                 * $vehicleFactor;
 
         $electricityFactor = self::GRID_FACTORS['household'];
         $electricity = $this->number($data, 'electricity_kwh')
-            * 12 * $electricityFactor;
+            * $electricityFactor;
 
         $transitMode = $this->choice($data, 'transit_mode');
         $transitFactor = $transitMode === 'none'
@@ -141,12 +151,21 @@ class CarbonCalculationService
             'flight_int_long' => 'Pesawat internasional jarak jauh',
             'train' => 'Kereta',
             'bus' => 'Bus',
+            'ojol' => 'Ojek Online (Ojol)',
+            'economy' => 'Pesawat (Ekonomi)',
+            'business' => 'Pesawat (Bisnis)',
+            'first' => 'Pesawat (First Class)',
         ];
         $foodLabels = [
             'beef' => 'Daging sapi',
             'poultry' => 'Unggas',
             'fish' => 'Ikan',
             'veg' => 'Sayuran',
+            'rice' => 'Beras / Nasi',
+            'egg' => 'Telur',
+            'fruits' => 'Buah-buahan',
+            'milk' => 'Susu & Produk Susu',
+            'dairy' => 'Susu & Produk Susu',
         ];
 
         $details = [
@@ -292,9 +311,11 @@ class CarbonCalculationService
             * self::HOTEL_FACTOR;
 
         $trainClass = $this->choice($data, 'train_class');
+        $trainPax = array_key_exists('train_pax', $data) ? $this->number($data, 'train_pax') : 1.0;
         $train = $trainClass === 'none'
             ? 0.0
-            : $this->number($data, 'train_km')
+            : $trainPax
+                * $this->number($data, 'train_km')
                 * $this->factor(self::TRAIN_FACTORS, $trainClass);
 
         $details = [
@@ -393,7 +414,9 @@ class CarbonCalculationService
                     'transport_mode' => 'train',
                     'transport_class' => $trainClass,
                     'distance_km' => $this->number($data, 'train_km'),
-                    'quantity' => $this->number($data, 'train_km'),
+                    'pax' => $trainPax,
+                    'passengers' => $trainPax,
+                    'quantity' => $trainPax * $this->number($data, 'train_km'),
                     'unit' => 'penumpang-km',
                     'emission_factor' => $trainClass === 'none' ? 0 : $this->factor(self::TRAIN_FACTORS, $trainClass),
                     'value_kg' => $train,
