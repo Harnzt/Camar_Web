@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AccountSessionService;
 use App\Services\AdminAuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,8 +14,10 @@ use Illuminate\Validation\Rules\Password;
 
 class AdminManagementController extends Controller
 {
-    public function __construct(private readonly AdminAuditService $audit)
-    {
+    public function __construct(
+        private readonly AdminAuditService $audit,
+        private readonly AccountSessionService $sessions,
+    ) {
     }
 
     public function index(Request $request)
@@ -113,9 +116,13 @@ class AdminManagementController extends Controller
             'status' => $validated['status'],
             'suspended_at' => $validated['status'] === 'suspended' ? now() : null,
             'suspension_reason' => $validated['status'] === 'suspended'
-                ? 'Dinonaktifkan oleh super admin.'
+                ? 'Dinonaktifkan oleh '.auth()->user()->role_label.' '.auth()->user()->name.'.'
                 : null,
         ]);
+
+        if ($validated['status'] === 'suspended') {
+            $this->sessions->terminate($admin);
+        }
 
         $this->audit->log(
             'admin.status.updated',
@@ -137,6 +144,7 @@ class AdminManagementController extends Controller
         ]);
 
         $admin->update(['password' => Hash::make($validated['password'])]);
+        $this->sessions->terminate($admin);
 
         $this->audit->log(
             'admin.password.updated',
@@ -179,6 +187,7 @@ class AdminManagementController extends Controller
             $admin,
             $snapshot
         );
+        $this->sessions->terminate($admin);
         $admin->delete();
 
         return back()->with('success', 'Akun administrator berhasil dihapus.');

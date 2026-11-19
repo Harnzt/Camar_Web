@@ -11,31 +11,35 @@ use Illuminate\View\View;
 
 class ProjectManagementController extends Controller
 {
-    public function __construct(private readonly AdminAuditService $audit)
-    {
-    }
+    public function __construct(private readonly AdminAuditService $audit) {}
 
     public function create(): View
     {
-        return view('main_page.admin-panel.projects.form', ['project' => new Project()]);
+        return view('main_page.admin-panel.projects.form', ['project' => new Project]);
     }
+
+    /**
+     * Fields that change what a buyer's certificate certifies. Editing one of
+     * these on an approved project sends it back to the auditor.
+     */
+    private const INTEGRITY_FIELDS = ['methodology', 'standard', 'verified_year', 'co2_per_year'];
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validatedProject($request);
         $validated['seller_id'] = null;
-        $validated['verification_status'] = 'approved';
-        $validated['reviewed_by'] = $request->user()->id;
-        $validated['reviewed_at'] = now();
+        // Proyek baru tidak langsung tayang: auditor memeriksanya lebih dulu.
+        $validated['verification_status'] = 'pending';
         $validated['submitted_at'] = now();
         $validated['image'] = $this->storeImage($request);
 
         $project = Project::create($validated);
-        $this->audit->log('project.created', "Admin membuat proyek {$project->name}.", $project, [], $project->only([
-            'name', 'company_name', 'category', 'location', 'price_per_ton', 'stock_available',
+        $this->audit->log('project.created', "Admin membuat proyek {$project->name} dan mengajukannya ke auditor.", $project, [], $project->only([
+            'name', 'company_name', 'category', 'location', 'price_per_ton', 'stock_available', 'verification_status',
         ]));
 
-        return redirect()->route('admin.projects.index')->with('success', 'Proyek berhasil ditambahkan.');
+        return redirect()->route('admin.projects.index')
+            ->with('success', 'Proyek berhasil ditambahkan dan dikirim ke auditor untuk diverifikasi. Proyek akan tayang setelah disetujui.');
     }
 
     public function edit(Project $project): View
@@ -54,10 +58,55 @@ class ProjectManagementController extends Controller
             unset($validated['image']);
         }
 
-        $project->update($validated);
-        $this->audit->log('project.updated', "Admin memperbarui proyek {$project->name}.", $project, $oldValues, $project->only(array_keys($validated)));
+        $reviewReason = $this->reviewReason($project, $validated);
+        if ($reviewReason !== null) {
+            $oldValues['verification_status'] = $project->verification_status;
+            $validated['verification_status'] = 'pending';
+            $validated['submitted_at'] = now();
+        }
 
-        return redirect()->route('admin.projects.index')->with('success', 'Proyek berhasil diperbarui.');
+        $project->update($validated);
+        $this->audit->log(
+            'project.updated',
+            "Admin memperbarui proyek {$project->name}.".($reviewReason ? " Dikirim ulang ke auditor: {$reviewReason}." : ''),
+            $project,
+            $oldValues,
+            $project->only(array_keys($validated))
+        );
+
+        return redirect()->route('admin.projects.index')->with(
+            'success',
+            $reviewReason
+                ? "Proyek diperbarui dan dikirim ulang ke auditor ({$reviewReason}). Proyek tidak tayang sampai disetujui."
+                : 'Proyek berhasil diperbarui.'
+        );
+    }
+
+    /**
+     * Why an update needs a new auditor decision, or null when it does not.
+     * Lowering stock or editing price/description keeps the project live.
+     */
+    private function reviewReason(Project $project, array $validated): ?string
+    {
+        if (in_array($project->verification_status, ['rejected', 'revision_required'], true)) {
+            return 'perbaikan setelah catatan auditor';
+        }
+
+        if ($project->verification_status !== 'approved') {
+            return null;
+        }
+
+        if ((int) $validated['stock_available'] > (int) $project->stock_available) {
+            return 'stok karbon ditambah';
+        }
+
+        foreach (self::INTEGRITY_FIELDS as $field) {
+            if ((string) ($validated[$field] ?? '') !== (string) ($project->{$field} ?? '')) {
+                return 'data metodologi/verifikasi berubah';
+            }
+        }
+
+        return null;
     }
 
     public function destroy(Project $project): RedirectResponse

@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->appendToGroup('web', \App\Http\Middleware\RejectLegacySellerSession::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureAccountIsActive::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
             'permission' => \App\Http\Middleware\EnsurePermission::class,

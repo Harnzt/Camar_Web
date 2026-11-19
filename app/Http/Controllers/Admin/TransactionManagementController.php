@@ -38,33 +38,12 @@ class TransactionManagementController extends Controller
 
     public function update(Request $request, Order $order)
     {
-        $user = $request->user();
-        $canManageTransactions = $user?->hasPermission('transactions.manage') ?? false;
-        $canIssueCertificates = $user?->hasPermission('certificates.issue') ?? false;
-
+        // Status pembayaran (pending, paid, failed) sepenuhnya dikelola webhook Midtrans.
+        // Panel admin hanya menjalankan alur sertifikat: paid -> verified -> completed.
         $validated = $request->validate([
-            'status' => [
-                'required',
-                Rule::in(['pending', 'paid', 'verified', 'completed', 'cancelled', 'refunded']),
-            ],
+            'status' => ['required', Rule::in(['verified', 'completed'])],
             'admin_notes' => ['nullable', 'string', 'max:3000'],
         ]);
-
-        if (! $canManageTransactions && ! $canIssueCertificates) {
-            abort(403, 'Anda tidak memiliki izin untuk memperbarui transaksi.');
-        }
-
-        if (! $canManageTransactions && ! in_array($validated['status'], ['verified', 'completed'], true)) {
-            return back()->withErrors([
-                'status' => 'Auditor hanya dapat memverifikasi transaksi dan menerbitkan sertifikat.',
-            ]);
-        }
-
-        if (in_array($validated['status'], ['verified', 'completed'], true) && ! $canIssueCertificates) {
-            return back()->withErrors([
-                'status' => 'Penerbitan sertifikat harus dilakukan oleh Auditor Pemerintah.',
-            ]);
-        }
 
         if ($validated['status'] === 'verified' && $order->status !== 'paid') {
             return back()->withErrors([
@@ -78,17 +57,10 @@ class TransactionManagementController extends Controller
             ]);
         }
 
-        if (in_array($validated['status'], ['verified', 'completed'], true)) {
-            if (! $order->project || $order->project->verification_status !== 'approved') {
-                return back()->withErrors([
-                    'status' => 'Proyek harus berstatus approved sebelum sertifikat dapat diproses.',
-                ]);
-            }
-        }
-
-        if (in_array($validated['status'], ['cancelled', 'refunded'], true)
-            && blank($validated['admin_notes'])) {
-            return back()->withErrors(['admin_notes' => 'Catatan wajib diisi untuk pembatalan atau pengembalian dana.']);
+        if (! $order->project || $order->project->verification_status !== 'approved') {
+            return back()->withErrors([
+                'status' => 'Proyek harus berstatus approved sebelum sertifikat dapat diproses.',
+            ]);
         }
 
         $old = $order->only([
@@ -105,7 +77,7 @@ class TransactionManagementController extends Controller
             'status' => $validated['status'],
             'status_updated_by' => auth()->id(),
             'status_updated_at' => now(),
-            'admin_notes' => $validated['admin_notes'],
+            'admin_notes' => $validated['admin_notes'] ?? null,
         ];
 
         if ($validated['status'] === 'completed') {

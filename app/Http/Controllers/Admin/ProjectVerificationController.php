@@ -95,9 +95,9 @@ class ProjectVerificationController extends Controller
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
             'rejection_reason' => $validated['verification_status'] === 'rejected'
-                ? $validated['notes']
+                ? ($validated['notes'] ?? null)
                 : null,
-            'admin_notes' => $validated['notes'],
+            'admin_notes' => $validated['notes'] ?? null,
         ]);
 
         $this->audit->log(

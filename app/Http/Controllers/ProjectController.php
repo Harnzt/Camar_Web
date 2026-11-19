@@ -107,7 +107,8 @@ class ProjectController extends Controller
             'quantity'   => 'required|integer|min:1',
         ]);
 
-        $project  = Project::findOrFail($request->project_id);
+        // Hanya proyek yang sudah disetujui auditor yang boleh masuk checkout.
+        $project  = Project::approved()->findOrFail($request->project_id);
         $quantity = (int) $request->quantity;
 
         // Simpan order sementara ke session

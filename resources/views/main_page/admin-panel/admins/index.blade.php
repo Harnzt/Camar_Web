@@ -7,30 +7,32 @@
 <section class="admin-manager">
     <div class="admin-manager-toolbar">
         <div>
-            <span class="panel-kicker">Kontrol akses</span>
             <h2>Daftar {{ $managedAccountLabel }}</h2>
             <p>Kelola profil, status akses, password, dan riwayat login akun {{ strtolower($managedAccountLabel) }} CAMAR.</p>
         </div>
         <button type="button" class="btn btn-primary" data-open-modal="create-admin-modal">
-            <i class="fas fa-plus"></i> Tambah {{ $managedAccountLabel }}
+            <i aria-hidden="true" class="fas fa-plus"></i> Tambah {{ $managedAccountLabel }}
         </button>
     </div>
 
-    <form method="GET" action="{{ route('admin.admins.index') }}" class="admin-search">
-        <i class="fas fa-magnifying-glass"></i>
-        <input
-            type="search"
-            name="search"
-            value="{{ request('search') }}"
-            placeholder="Cari nama, email, atau role..."
-            aria-label="Cari {{ strtolower($managedAccountLabel) }}"
-        >
-        @if(request('search'))
-            <a href="{{ route('admin.admins.index') }}" aria-label="Hapus pencarian">
-                <i class="fas fa-xmark"></i>
-            </a>
-        @endif
-        <button type="submit" class="btn btn-light">Cari</button>
+    <form method="GET" action="{{ route('admin.admins.index') }}" class="admin-search-form">
+        <label for="admin-search-input">Cari {{ strtolower($managedAccountLabel) }}</label>
+        <div class="admin-search">
+            <i aria-hidden="true" class="fas fa-magnifying-glass"></i>
+            <input
+                type="search"
+                id="admin-search-input"
+                name="search"
+                value="{{ request('search') }}"
+                placeholder="Nama atau email"
+            >
+            @if(request('search'))
+                <a href="{{ route('admin.admins.index') }}" aria-label="Hapus pencarian">
+                    <i aria-hidden="true" class="fas fa-xmark"></i>
+                </a>
+            @endif
+            <button type="submit" class="btn btn-light">Cari</button>
+        </div>
     </form>
 
     <div class="admin-table-wrap">
@@ -49,7 +51,7 @@
                     <tr>
                         <td>
                             <div class="admin-identity">
-                                <img src="{{ $admin->profile_photo_url }}" alt="{{ $admin->name }}">
+                                <img src="{{ $admin->profile_photo_url }}" alt="" width="44" height="44">
                                 <div>
                                     <strong>{{ $admin->name }}</strong>
                                     <span>{{ $admin->email }}</span>
@@ -79,6 +81,7 @@
                                     type="submit"
                                     class="status-toggle {{ $admin->status === 'verified' ? 'is-active' : '' }}"
                                     title="{{ $admin->status === 'verified' ? 'Nonaktifkan akun' : 'Aktifkan akun' }}"
+                                    aria-label="{{ $admin->status === 'verified' ? 'Nonaktifkan' : 'Aktifkan' }} akun {{ $admin->name }}"
                                     @disabled($admin->is(Auth::user()))
                                 >
                                     <span></span>
@@ -91,41 +94,45 @@
                                 <button
                                     type="button"
                                     class="icon-action edit"
-                                    title="Edit administrator"
+                                    title="Edit akun"
+                                    aria-label="Edit akun {{ $admin->name }}"
                                     data-admin-action="edit"
                                     data-admin-id="{{ $admin->id }}"
                                     data-admin-name="{{ $admin->name }}"
                                     data-admin-email="{{ $admin->email }}"
                                     data-admin-role="{{ $admin->role }}"
                                     data-update-url="{{ route('admin.admins.update', $admin) }}"
-                                ><i class="fas fa-pen"></i></button>
+                                ><i aria-hidden="true" class="fas fa-pen"></i></button>
                                 <button
                                     type="button"
                                     class="icon-action logs"
-                                    title="Lihat login log"
+                                    title="Lihat riwayat login"
+                                    aria-label="Lihat riwayat login {{ $admin->name }}"
                                     data-admin-action="logs"
                                     data-admin-name="{{ $admin->name }}"
                                     data-logs-url="{{ route('admin.admins.login-logs', $admin) }}"
-                                ><i class="fas fa-clipboard-list"></i></button>
+                                ><i aria-hidden="true" class="fas fa-clipboard-list"></i></button>
                                 <button
                                     type="button"
                                     class="icon-action password"
                                     title="Ganti password"
+                                    aria-label="Ganti password {{ $admin->name }}"
                                     data-admin-action="password"
                                     data-admin-name="{{ $admin->name }}"
                                     data-admin-email="{{ $admin->email }}"
                                     data-password-url="{{ route('admin.admins.password', $admin) }}"
-                                ><i class="fas fa-key"></i></button>
+                                ><i aria-hidden="true" class="fas fa-key"></i></button>
                                 <button
                                     type="button"
                                     class="icon-action delete"
-                                    title="Hapus administrator"
+                                    title="Hapus akun"
+                                    aria-label="Hapus akun {{ $admin->name }}"
                                     data-admin-action="delete"
                                     data-admin-name="{{ $admin->name }}"
                                     data-admin-email="{{ $admin->email }}"
                                     data-delete-url="{{ route('admin.admins.destroy', $admin) }}"
                                     @disabled($admin->is(Auth::user()))
-                                ><i class="fas fa-trash"></i></button>
+                                ><i aria-hidden="true" class="fas fa-trash"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -133,7 +140,7 @@
                     <tr>
                         <td colspan="5">
                             <div class="admin-empty">
-                                <i class="fas fa-user-shield"></i>
+                                <i aria-hidden="true" class="fas fa-user-shield"></i>
                                 <strong>{{ $managedAccountLabel }} tidak ditemukan</strong>
                                 <span>Coba ubah kata kunci pencarian atau tambahkan akun baru.</span>
                             </div>
@@ -151,8 +158,8 @@
     <form method="POST" action="{{ route('admin.admins.store') }}" class="admin-modal-card">
         @csrf
         <div class="admin-modal-header">
-            <div><span class="panel-kicker">Akun baru</span><h3>Tambah {{ $managedAccountLabel }}</h3></div>
-            <button type="button" class="modal-close" data-close-modal><i class="fas fa-xmark"></i></button>
+            <h3>Tambah {{ $managedAccountLabel }}</h3>
+            <button type="button" class="modal-close" data-close-modal aria-label="Tutup"><i aria-hidden="true" class="fas fa-xmark"></i></button>
         </div>
         <div class="admin-modal-body">
             <div class="field-group">
@@ -175,14 +182,14 @@
                 <label for="create-password">Password awal</label>
                 <div class="password-field">
                     <input id="create-password" type="password" name="password" required minlength="8" autocomplete="new-password">
-                    <button type="button" data-toggle-password="create-password"><i class="fas fa-eye"></i></button>
+                    <button type="button" aria-label="Tampilkan password" data-toggle-password="create-password"><i aria-hidden="true" class="fas fa-eye"></i></button>
                 </div>
                 <small>Minimal 8 karakter.</small>
             </div>
         </div>
         <div class="admin-modal-footer">
             <button type="button" class="btn btn-light" data-close-modal>Batal</button>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i> Simpan</button>
+            <button type="submit" class="btn btn-primary"><i aria-hidden="true" class="fas fa-floppy-disk"></i> Simpan</button>
         </div>
     </form>
 </dialog>
@@ -192,8 +199,8 @@
         @csrf
         @method('PATCH')
         <div class="admin-modal-header">
-            <div><span class="panel-kicker">Ubah akun</span><h3 id="edit-admin-title">Edit {{ $managedAccountLabel }}</h3></div>
-            <button type="button" class="modal-close" data-close-modal><i class="fas fa-xmark"></i></button>
+            <h3 id="edit-admin-title">Edit {{ $managedAccountLabel }}</h3>
+            <button type="button" class="modal-close" data-close-modal aria-label="Tutup"><i aria-hidden="true" class="fas fa-xmark"></i></button>
         </div>
         <div class="admin-modal-body">
             <div class="field-group">
@@ -215,7 +222,7 @@
         </div>
         <div class="admin-modal-footer">
             <button type="button" class="btn btn-light" data-close-modal>Batal</button>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i> Update</button>
+            <button type="submit" class="btn btn-primary"><i aria-hidden="true" class="fas fa-floppy-disk"></i> Update</button>
         </div>
     </form>
 </dialog>
@@ -225,32 +232,32 @@
         @csrf
         @method('PATCH')
         <div class="admin-modal-header">
-            <div><span class="panel-kicker">Keamanan akun</span><h3 id="password-admin-title">Ganti Password</h3></div>
-            <button type="button" class="modal-close" data-close-modal><i class="fas fa-xmark"></i></button>
+            <h3 id="password-admin-title">Ganti Password</h3>
+            <button type="button" class="modal-close" data-close-modal aria-label="Tutup"><i aria-hidden="true" class="fas fa-xmark"></i></button>
         </div>
         <div class="admin-modal-body">
             <div class="account-summary">
-                <i class="fas fa-shield-halved"></i>
+                <i aria-hidden="true" class="fas fa-shield-halved"></i>
                 <div><strong id="password-admin-name"></strong><span id="password-admin-email"></span></div>
             </div>
             <div class="field-group">
                 <label for="new-password">Password baru</label>
                 <div class="password-field">
                     <input id="new-password" type="password" name="password" required minlength="8" autocomplete="new-password">
-                    <button type="button" data-toggle-password="new-password"><i class="fas fa-eye"></i></button>
+                    <button type="button" aria-label="Tampilkan password" data-toggle-password="new-password"><i aria-hidden="true" class="fas fa-eye"></i></button>
                 </div>
             </div>
             <div class="field-group">
                 <label for="new-password-confirmation">Konfirmasi password</label>
                 <div class="password-field">
                     <input id="new-password-confirmation" type="password" name="password_confirmation" required minlength="8" autocomplete="new-password">
-                    <button type="button" data-toggle-password="new-password-confirmation"><i class="fas fa-eye"></i></button>
+                    <button type="button" aria-label="Tampilkan password" data-toggle-password="new-password-confirmation"><i aria-hidden="true" class="fas fa-eye"></i></button>
                 </div>
             </div>
         </div>
         <div class="admin-modal-footer">
             <button type="button" class="btn btn-light" data-close-modal>Batal</button>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-key"></i> Ganti Password</button>
+            <button type="submit" class="btn btn-primary"><i aria-hidden="true" class="fas fa-key"></i> Ganti Password</button>
         </div>
     </form>
 </dialog>
@@ -258,11 +265,11 @@
 <dialog class="admin-modal admin-modal-wide" id="login-logs-modal">
     <div class="admin-modal-card">
         <div class="admin-modal-header">
-            <div><span class="panel-kicker">Aktivitas keamanan</span><h3 id="login-logs-title">Login Log</h3></div>
-            <button type="button" class="modal-close" data-close-modal><i class="fas fa-xmark"></i></button>
+            <h3 id="login-logs-title">Riwayat Login</h3>
+            <button type="button" class="modal-close" data-close-modal aria-label="Tutup"><i aria-hidden="true" class="fas fa-xmark"></i></button>
         </div>
         <div class="admin-modal-body">
-            <div id="login-logs-loading" class="modal-loading-state"><i class="fas fa-circle-notch fa-spin"></i> Memuat riwayat login...</div>
+            <div id="login-logs-loading" class="modal-loading-state"><i aria-hidden="true" class="fas fa-circle-notch fa-spin"></i> Memuat riwayat login...</div>
             <div class="login-log-table-wrap" id="login-logs-content" hidden>
                 <table class="login-log-table">
                     <thead><tr><th>Waktu Login</th><th>Waktu Logout</th><th>IP Address</th><th>Perangkat</th></tr></thead>
@@ -282,13 +289,13 @@
         @csrf
         @method('DELETE')
         <div class="admin-modal-body delete-confirmation">
-            <div class="delete-icon"><i class="fas fa-trash"></i></div>
+            <div class="delete-icon"><i aria-hidden="true" class="fas fa-trash"></i></div>
             <h3>Hapus akun administrator?</h3>
             <p>Akun <strong id="delete-admin-name"></strong> (<span id="delete-admin-email"></span>) akan dihapus dan tidak dapat lagi mengakses panel admin.</p>
         </div>
         <div class="admin-modal-footer">
             <button type="button" class="btn btn-light" data-close-modal>Batal</button>
-            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Hapus Akun</button>
+            <button type="submit" class="btn btn-danger"><i aria-hidden="true" class="fas fa-trash"></i> Hapus Akun</button>
         </div>
     </form>
 </dialog>
@@ -322,7 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById(button.dataset.togglePassword);
             const visible = input.type === 'text';
             input.type = visible ? 'password' : 'text';
-            button.innerHTML = `<i class="fas fa-${visible ? 'eye' : 'eye-slash'}"></i>`;
+            button.innerHTML = `<i aria-hidden="true" class="fas fa-${visible ? 'eye' : 'eye-slash'}"></i>`;
+            button.setAttribute('aria-label', visible ? 'Tampilkan password' : 'Sembunyikan password');
         });
     });
 
@@ -355,9 +363,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const body = document.getElementById('login-logs-body');
         const pagination = document.getElementById('login-logs-pagination');
 
-        document.getElementById('login-logs-title').textContent = `Login Log · ${name}`;
+        document.getElementById('login-logs-title').textContent = `Riwayat Login · ${name}`;
         loading.hidden = false;
-        loading.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Memuat riwayat login...';
+        loading.innerHTML = '<i aria-hidden="true" class="fas fa-circle-notch fa-spin"></i> Memuat riwayat login...';
         content.hidden = true;
         openModal(modal);
 
@@ -392,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loading.hidden = true;
             content.hidden = false;
         } catch (error) {
-            loading.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${error.message}`;
+            loading.innerHTML = `<i aria-hidden="true" class="fas fa-triangle-exclamation"></i> ${escapeHtml(error.message)} Periksa koneksi lalu buka kembali riwayat login.`;
         }
     };
 

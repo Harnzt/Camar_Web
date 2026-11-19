@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -25,12 +25,14 @@ class DashboardUpdated implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
+     * Private so only authenticated administrators receive buyer names.
+     *
      * @return array<int, \Illuminate\Broadcasting\Channel>
      */
     public function broadcastOn(): array
     {
         return [
-            new Channel('admin-dashboard'),
+            new PrivateChannel('admin-dashboard'),
         ];
     }
     

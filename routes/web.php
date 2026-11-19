@@ -119,11 +119,16 @@ Route::middleware(['auth', 'role:admin,auditor,super_admin'])
                 ->name('users.status');
         });
 
-        Route::middleware('permission:documents.verify')->group(function () {
-            Route::patch('/documents/{document}', [UserVerificationController::class, 'updateDocument'])
-                ->name('documents.update');
+        Route::patch('/documents/{document}', [UserVerificationController::class, 'updateDocument'])
+            ->middleware('permission:documents.verify')
+            ->name('documents.update');
+
+        // Akses per jenis dokumen (akun vs proyek) diperiksa lagi di controller.
+        Route::middleware('permission:documents.verify|users.verify|projects.verify')->group(function () {
             Route::get('/documents/{document}/download', [UserVerificationController::class, 'download'])
                 ->name('documents.download');
+            Route::get('/documents/{document}/preview', [UserVerificationController::class, 'preview'])
+                ->name('documents.preview');
         });
 
         Route::middleware('permission:projects.verify')->group(function () {
@@ -136,14 +141,18 @@ Route::middleware(['auth', 'role:admin,auditor,super_admin'])
                 Route::delete('/projects/{project}', [ProjectManagementController::class, 'destroy'])->name('projects.destroy');
             });
             Route::get('/projects/{project}', [ProjectVerificationController::class, 'show'])->name('projects.show');
+            // Auditor memutuskan proyek boleh tayang; admin tidak menyetujui proyeknya sendiri.
             Route::patch('/projects/{project}', [ProjectVerificationController::class, 'update'])
+                ->middleware('role:auditor,super_admin')
                 ->name('projects.update');
         });
 
-        Route::middleware('permission:transactions.manage|certificates.issue')->group(function () {
+        Route::middleware('permission:transactions.view|certificates.issue')->group(function () {
             Route::get('/transactions', [TransactionManagementController::class, 'index'])
                 ->name('transactions.index');
+            // Status pembayaran diatur otomatis oleh Midtrans; panel hanya memproses sertifikat.
             Route::patch('/transactions/{order}', [TransactionManagementController::class, 'update'])
+                ->middleware('permission:certificates.issue')
                 ->name('transactions.update');
         });
 
@@ -170,9 +179,10 @@ Route::middleware(['auth', 'role:admin,auditor,super_admin'])
                 ->name('roles.update');
         });
 
-        Route::get('/audit-logs', [AuditLogController::class, 'index'])
-            ->middleware('permission:audit.view')
-            ->name('audit.index');
+        Route::middleware('permission:audit.view')->group(function () {
+            Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
+            Route::get('/audit-logs/export', [AuditLogController::class, 'export'])->name('audit.export');
+        });
     });
 
 Route::post('/chatbot/send', [ChatbotController::class, 'send'])

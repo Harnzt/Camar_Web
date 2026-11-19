@@ -10,21 +10,30 @@ use Illuminate\Http\Request;
 
 class RolePermissionController extends Controller
 {
-    public function __construct(private readonly AdminAuditService $audit)
-    {
-    }
+    public function __construct(private readonly AdminAuditService $audit) {}
+
+    /**
+     * Only administrator roles use panel permissions; buyer and seller never
+     * reach the admin panel, so they are not shown or editable here.
+     */
+    private const EDITABLE_ROLES = ['admin', 'auditor'];
 
     public function index()
     {
-        $roles = Role::with('permissions')->orderBy('id')->get();
+        $roles = Role::with('permissions')
+            ->whereIn('slug', self::EDITABLE_ROLES)
+            ->orderBy('id')
+            ->get();
+        $superAdminRole = Role::where('slug', 'super_admin')->first();
         $permissions = Permission::orderBy('name')->get();
 
-        return view('main_page.admin-panel.roles.index', compact('roles', 'permissions'));
+        return view('main_page.admin-panel.roles.index', compact('roles', 'superAdminRole', 'permissions'));
     }
 
     public function update(Request $request, Role $role)
     {
         abort_if($role->slug === 'super_admin', 403, 'Permission super admin tidak dapat dibatasi.');
+        abort_unless(in_array($role->slug, self::EDITABLE_ROLES, true), 404);
 
         $validated = $request->validate([
             'permissions' => ['nullable', 'array'],

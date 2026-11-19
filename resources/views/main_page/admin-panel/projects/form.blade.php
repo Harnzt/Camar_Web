@@ -10,6 +10,21 @@
         @csrf
         @if($isEditing) @method('PUT') @endif
 
+        <div class="alert alert-info project-form-notice">
+            @if(! $isEditing)
+                Proyek baru dikirim ke auditor untuk diverifikasi dan baru tayang di marketplace setelah disetujui.
+            @elseif(in_array($project->verification_status, ['revision_required', 'rejected'], true))
+                Setelah disimpan, proyek otomatis diajukan ulang ke auditor.
+                @if($project->admin_notes)
+                    <br><strong>Catatan auditor:</strong> {{ $project->admin_notes }}
+                @endif
+            @elseif($project->verification_status === 'approved')
+                Proyek ini sedang tayang. Menambah stok, atau mengubah metodologi, standar, tahun verifikasi, maupun reduksi CO₂, akan mengirim proyek kembali ke auditor dan menurunkannya dari marketplace sampai disetujui lagi. Mengubah harga, deskripsi, atau mengurangi stok tidak memerlukan verifikasi ulang.
+            @else
+                Proyek ini sedang menunggu keputusan auditor.
+            @endif
+        </div>
+
         <div class="form-grid">
             <label>Nama proyek<input name="name" value="{{ old('name', $project->name) }}" required maxlength="255"></label>
             <label>Nama pengembang / perusahaan<input name="company_name" value="{{ old('company_name', $project->company_name) }}" required maxlength="255"></label>
@@ -30,7 +45,7 @@
 
         <div class="form-actions">
             <a class="btn btn-light" href="{{ route('admin.projects.index') }}">Batal</a>
-            <button class="btn btn-primary" type="submit">{{ $isEditing ? 'Simpan Perubahan' : 'Tambah Proyek' }}</button>
+            <button class="btn btn-primary" type="submit">{{ $isEditing ? (in_array($project->verification_status, ['revision_required', 'rejected'], true) ? 'Simpan & Ajukan Ulang' : 'Simpan Perubahan') : 'Tambah & Ajukan ke Auditor' }}</button>
         </div>
     </form>
 </section>

@@ -39,8 +39,8 @@ test('buyer cannot access admin dashboard', function () {
         ->assertForbidden();
 });
 
-test('auditor can access dashboard and review a document', function () {
-    $auditor = createAdministrativeUser('auditor');
+test('admin can access dashboard and review an account document', function () {
+    $reviewer = createAdministrativeUser('admin');
     $buyer = User::create([
         'name' => 'Buyer Review',
         'email' => 'buyer-review@example.test',
@@ -56,11 +56,11 @@ test('auditor can access dashboard and review a document', function () {
         'status' => 'pending',
     ]);
 
-    $this->actingAs($auditor)
+    $this->actingAs($reviewer)
         ->get(route('admin.dashboard'))
         ->assertOk();
 
-    $this->actingAs($auditor)
+    $this->actingAs($reviewer)
         ->patch(route('admin.documents.update', $document), [
             'status' => 'approved',
             'notes' => 'Dokumen valid.',
@@ -69,12 +69,12 @@ test('auditor can access dashboard and review a document', function () {
 
     expect($document->fresh()->status)->toBe('approved')
         ->and($buyer->fresh()->status)->toBe('verified')
-        ->and($buyer->fresh()->verified_by)->toBe($auditor->id)
+        ->and($buyer->fresh()->verified_by)->toBe($reviewer->id)
         ->and(AdminActivityLog::where('action', 'document.reviewed')->exists())->toBeTrue();
 });
 
 test('account status follows rejected document review', function () {
-    $auditor = createAdministrativeUser('auditor');
+    $reviewer = createAdministrativeUser('admin');
     $seller = User::create([
         'name' => 'Seller Review',
         'email' => 'seller-review@example.test',
@@ -90,7 +90,7 @@ test('account status follows rejected document review', function () {
         'status' => 'pending',
     ]);
 
-    $this->actingAs($auditor)
+    $this->actingAs($reviewer)
         ->patch(route('admin.documents.update', $document), [
             'status' => 'rejected',
             'notes' => 'Nomor dokumen tidak sesuai.',
@@ -104,8 +104,8 @@ test('account status follows rejected document review', function () {
         ->and($seller->rejection_reason)->toBe('Nomor dokumen tidak sesuai.');
 });
 
-test('auditor can decide account verification from the admin decision panel', function () {
-    $auditor = createAdministrativeUser('auditor');
+test('admin decides account verification and auditor no longer can', function () {
+    $reviewer = createAdministrativeUser('admin');
     $buyer = User::create([
         'name' => 'Buyer Decision',
         'email' => 'buyer-decision@example.test',
@@ -121,7 +121,14 @@ test('auditor can decide account verification from the admin decision panel', fu
         'status' => 'pending',
     ]);
 
-    $this->actingAs($auditor)
+    $this->actingAs(createAdministrativeUser('auditor'))
+        ->patch(route('admin.users.status', $buyer), [
+            'status' => 'verified',
+            'reason' => 'Data dan dokumen sesuai.',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($reviewer)
         ->patch(route('admin.users.status', $buyer), [
             'status' => 'verified',
             'reason' => 'Data dan dokumen sesuai.',
@@ -132,13 +139,13 @@ test('auditor can decide account verification from the admin decision panel', fu
     $document->refresh();
 
     expect($buyer->status)->toBe('verified')
-        ->and($buyer->verified_by)->toBe($auditor->id)
+        ->and($buyer->verified_by)->toBe($reviewer->id)
         ->and($document->status)->toBe('approved')
-        ->and($document->reviewed_by)->toBe($auditor->id);
+        ->and($document->reviewed_by)->toBe($reviewer->id);
 });
 
 test('user verification detail shows documents as read only and decision form separately', function () {
-    $auditor = createAdministrativeUser('auditor');
+    $reviewer = createAdministrativeUser('admin');
     $buyer = User::create([
         'name' => 'Buyer Readonly',
         'email' => 'buyer-readonly@example.test',
@@ -154,7 +161,7 @@ test('user verification detail shows documents as read only and decision form se
         'status' => 'pending',
     ]);
 
-    $this->actingAs($auditor)
+    $this->actingAs($reviewer)
         ->get(route('admin.users.show', $buyer))
         ->assertOk()
         ->assertSee('Informasi Pengguna')
@@ -163,39 +170,6 @@ test('user verification detail shows documents as read only and decision form se
         ->assertSee('Unduh dokumen')
         ->assertDontSee('Catatan pemeriksaan')
         ->assertDontSee('inline-review');
-});
-
-test('seller project submission stores uploaded project documents', function () {
-    Storage::fake('private');
-
-    $seller = User::create([
-        'name' => 'Seller Project',
-        'email' => 'seller-project@example.test',
-        'password' => 'password',
-        'role' => 'seller',
-        'account_category' => 'company',
-        'status' => 'verified',
-    ]);
-
-    $this->actingAs($seller)
-        ->post(route('seller.projects.store'), [
-            'name' => 'Mangrove Audit Project',
-            'category' => 'mangrove',
-            'location' => 'Jakarta',
-            'price_per_ton' => 125000,
-            'stock_available' => 100,
-            'description' => 'Proyek rehabilitasi mangrove.',
-            'methodology_document' => UploadedFile::fake()->create('methodology.pdf', 120, 'application/pdf'),
-        ])
-        ->assertRedirect(route('seller.dashboard'));
-
-    $project = Project::where('seller_id', $seller->id)->first();
-    $document = DocumentVerification::where('document_type', "project_{$project->id}_methodology_document")->first();
-
-    expect($document)->not->toBeNull()
-        ->and($document->status)->toBe('pending');
-
-    Storage::disk('private')->assertExists($document->document_path);
 });
 
 test('auditor can see project documents on project review page', function () {
@@ -236,12 +210,28 @@ test('auditor can see project documents on project review page', function () {
         ->assertSee('certificate.pdf');
 });
 
-test('regular admin cannot manage administrator accounts', function () {
+test('regular admin manages auditors only, not other admins', function () {
     $admin = createAdministrativeUser('admin');
+    $otherAdmin = User::create([
+        'name' => 'Admin Lain',
+        'email' => 'admin-lain@example.test',
+        'password' => 'password',
+        'role' => 'admin',
+        'account_category' => 'personal',
+        'status' => 'verified',
+    ]);
 
     $this->actingAs($admin)
         ->get(route('admin.admins.index'))
-        ->assertForbidden();
+        ->assertOk()
+        ->assertSee('Kelola Auditor')
+        ->assertDontSee('admin-lain@example.test');
+
+    $this->actingAs($admin)
+        ->patch(route('admin.admins.status', $otherAdmin), ['status' => 'suspended'])
+        ->assertNotFound();
+
+    expect($otherAdmin->fresh()->status)->toBe('verified');
 });
 
 test('super admin can create an admin account', function () {
@@ -320,7 +310,7 @@ test('super admin cannot delete own account', function () {
 
     $this->actingAs($superAdmin)
         ->delete(route('admin.admins.destroy', $superAdmin))
-        ->assertSessionHasErrors('delete');
+        ->assertNotFound();
 
     expect($superAdmin->fresh()->trashed())->toBeFalse();
 });

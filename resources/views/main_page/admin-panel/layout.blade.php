@@ -8,74 +8,85 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Ubuntu:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/admin-panel.css') }}?v={{ filemtime(public_path('css/admin-panel.css')) }}">
+    @stack('head')
 </head>
 <body>
+@php
+    $authUser = Auth::user();
+    $canIssueCertificates = $authUser->hasPermission('certificates.issue');
+
+    // Navigasi dikelompokkan: pekerjaan harian di atas, akses & keamanan di bawah.
+    $navGroups = [
+        'Operasional' => [
+            ['show' => $authUser->hasPermission('admin.dashboard'), 'route' => 'admin.dashboard', 'match' => 'admin.dashboard', 'icon' => 'fa-chart-pie', 'label' => 'Dashboard'],
+            ['show' => $authUser->hasPermission('users.verify'), 'route' => 'admin.users.index', 'match' => 'admin.users.*', 'icon' => 'fa-user-check', 'label' => 'Verifikasi Akun', 'badge' => ['users', 'nav-badge-users', 'akun menunggu']],
+            ['show' => $authUser->hasPermission('projects.verify'), 'route' => 'admin.projects.index', 'match' => 'admin.projects.*', 'icon' => 'fa-seedling', 'label' => $authUser->canManageProjects() ? 'Kelola Proyek' : 'Verifikasi Proyek', 'badge' => ['projects', 'nav-badge-projects', $authUser->canReviewProjects() ? 'proyek menunggu verifikasi' : 'proyek perlu revisi']],
+            ['show' => $authUser->hasAnyPermission('transactions.view', 'certificates.issue'), 'route' => 'admin.transactions.index', 'match' => 'admin.transactions.*', 'icon' => 'fa-receipt', 'label' => $canIssueCertificates ? 'Transaksi & Sertifikat' : 'Transaksi', 'badge' => ['transactions', 'nav-badge-transactions', 'transaksi menunggu sertifikat']],
+        ],
+        'Akses & keamanan' => [
+            ['show' => $authUser->hasPermission('admins.manage'), 'route' => 'admin.admins.index', 'match' => 'admin.admins.*', 'icon' => 'fa-user-shield', 'label' => $authUser->isSuperAdmin() ? 'Kelola Admin' : 'Kelola Auditor'],
+            ['show' => $authUser->isSuperAdmin(), 'route' => 'admin.roles.index', 'match' => 'admin.roles.*', 'icon' => 'fa-key', 'label' => 'Role & Permission'],
+            ['show' => $authUser->hasPermission('audit.view'), 'route' => 'admin.audit.index', 'match' => 'admin.audit.*', 'icon' => 'fa-clock-rotate-left', 'label' => 'Audit Log'],
+        ],
+    ];
+@endphp
 <div class="admin-shell">
-    <aside class="admin-sidebar">
-        <a href="{{ route('admin.dashboard') }}" class="admin-brand">
-            <img src="{{ asset('images/logo.png') }}" alt="CAMAR">
-            <div><strong>CAMAR</strong><span>Administration</span></div>
-        </a>
+    <aside class="admin-sidebar" id="admin-sidebar">
+        <div class="admin-sidebar-top">
+            <a href="{{ route('admin.dashboard') }}" class="admin-brand">
+                <img src="{{ asset('images/logo.png') }}" alt="" width="42" height="42">
+                <div><strong>CAMAR</strong><span>Panel administrasi</span></div>
+            </a>
+            <button type="button" class="admin-menu-toggle" id="admin-menu-toggle" aria-controls="admin-sidebar-menu" aria-expanded="false" aria-label="Buka menu">
+                <i aria-hidden="true" class="fas fa-bars"></i>
+            </button>
+        </div>
 
-        <nav class="admin-nav">
-            @if(Auth::user()->hasPermission('admin.dashboard'))
-                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                    <i class="fas fa-chart-pie"></i><span>Dashboard</span>
-                </a>
-            @endif
-            @if(Auth::user()->hasPermission('users.verify'))
-                <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                    <i class="fas fa-user-check"></i><span>Verifikasi Akun</span>
-                </a>
-            @endif
-            @if(Auth::user()->hasPermission('projects.verify'))
-                <a href="{{ route('admin.projects.index') }}" class="{{ request()->routeIs('admin.projects.*') ? 'active' : '' }}">
-                    <i class="fas fa-seedling"></i><span>Kelola Proyek</span>
-                </a>
-            @endif
-            @if(Auth::user()->hasPermission('transactions.manage') || Auth::user()->hasPermission('certificates.issue'))
-                <a href="{{ route('admin.transactions.index') }}" class="{{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}">
-                    <i class="fas fa-receipt"></i><span>Transaksi & Sertifikat</span>
-                </a>
-            @endif
+        <div class="admin-sidebar-menu" id="admin-sidebar-menu">
+            <nav class="admin-nav" aria-label="Menu panel admin">
+                @foreach($navGroups as $groupLabel => $items)
+                    @php
+                        $visibleItems = array_filter($items, fn ($item) => $item['show']);
+                    @endphp
+                    @continue(empty($visibleItems))
+                    <div class="admin-nav-label">{{ $groupLabel }}</div>
+                    @foreach($visibleItems as $item)
+                        @php
+                            $isActive = request()->routeIs($item['match']);
+                            $badgeCount = isset($item['badge']) ? $adminQueueCounts[$item['badge'][0]] : null;
+                        @endphp
+                        <a href="{{ route($item['route']) }}" class="{{ $isActive ? 'active' : '' }}" @if($isActive) aria-current="page" @endif>
+                            <i aria-hidden="true" class="fas {{ $item['icon'] }}"></i><span>{{ $item['label'] }}</span>
+                            @if($badgeCount !== null)
+                                <span class="nav-badge" id="{{ $item['badge'][1] }}" data-count="{{ $badgeCount }}" @if($badgeCount === 0) hidden @endif>
+                                    <span class="nav-badge-count">{{ $badgeCount > 99 ? '99+' : $badgeCount }}</span><span class="visually-hidden"> {{ $item['badge'][2] }}</span>
+                                </span>
+                            @endif
+                        </a>
+                    @endforeach
+                @endforeach
+            </nav>
 
-            @if(Auth::user()->hasPermission('admins.manage'))
-                <div class="admin-nav-label">{{ Auth::user()->isSuperAdmin() ? 'Super Admin' : 'Admin' }}</div>
-                <a href="{{ route('admin.admins.index') }}" class="{{ request()->routeIs('admin.admins.*') ? 'active' : '' }}">
-                    <i class="fas fa-user-shield"></i><span>{{ Auth::user()->isSuperAdmin() ? 'Kelola Admin' : 'Kelola Auditor' }}</span>
-                </a>
-            @endif
-            @if(Auth::user()->hasPermission('permissions.manage'))
-                <a href="{{ route('admin.roles.index') }}" class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
-                    <i class="fas fa-key"></i><span>Role & Permission</span>
-                </a>
-            @endif
-            @if(Auth::user()->hasPermission('audit.view'))
-                <a href="{{ route('admin.audit.index') }}" class="{{ request()->routeIs('admin.audit.*') ? 'active' : '' }}">
-                    <i class="fas fa-clock-rotate-left"></i><span>Audit Log</span>
-                </a>
-            @endif
-        </nav>
-
-        <div class="admin-sidebar-footer">
-            <div class="admin-profile">
-                <img src="{{ Auth::user()->profile_photo_url }}" alt="{{ Auth::user()->name }}">
-                <div><strong>{{ Auth::user()->name }}</strong><span>{{ Auth::user()->role_label }}</span></div>
+            <div class="admin-sidebar-footer">
+                <div class="admin-profile">
+                    <img src="{{ $authUser->profile_photo_url }}" alt="" width="38" height="38">
+                    <div><strong>{{ $authUser->name }}</strong><span>{{ $authUser->role_label }}</span></div>
+                </div>
+                <form action="{{ route('logout') }}" method="POST">
+                    @csrf
+                    <button type="submit"><i aria-hidden="true" class="fas fa-sign-out-alt"></i> Logout</button>
+                </form>
             </div>
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button type="submit"><i class="fas fa-sign-out-alt"></i> Logout</button>
-            </form>
         </div>
     </aside>
 
     <main class="admin-main">
         <header class="admin-topbar">
             <div>
-                <span class="admin-eyebrow">CAMAR Control Center</span>
+                <span class="admin-eyebrow">Panel {{ $authUser->role_label }}</span>
                 <h1>@yield('page-title', 'Dashboard')</h1>
             </div>
-            <a href="{{ route('home') }}" class="btn btn-light"><i class="fas fa-arrow-up-right-from-square"></i> Lihat Situs</a>
+            <a href="{{ route('home') }}" class="btn btn-light" aria-label="Lihat situs CAMAR"><i aria-hidden="true" class="fas fa-arrow-up-right-from-square"></i> <span class="hide-sm">Lihat Situs</span></a>
         </header>
 
         <div class="admin-content">
@@ -95,61 +106,130 @@
         </div>
     </main>
 </div>
-    
-    <!-- Realtime WebSockets (Laravel Echo + Reverb) -->
-    <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            window.Pusher = Pusher;
-            window.Echo = new Echo({
-                broadcaster: 'reverb',
-                key: '{{ config('broadcasting.connections.reverb.key') }}',
-                wsHost: window.location.hostname,
-                wsPort: {{ config('broadcasting.connections.reverb.options.port', 8080) }},
-                wssPort: {{ config('broadcasting.connections.reverb.options.port', 8080) }},
-                forceTLS: (window.location.protocol === 'https:'),
-                enabledTransports: ['ws', 'wss'],
-            });
 
-            // Simple Custom Toast Function
-            function showToast(message) {
-                const toast = document.createElement('div');
-                toast.innerText = message;
-                toast.style.position = 'fixed';
-                toast.style.bottom = '20px';
-                toast.style.right = '20px';
-                toast.style.backgroundColor = '#124170';
-                toast.style.color = '#fff';
-                toast.style.padding = '12px 24px';
-                toast.style.borderRadius = '8px';
-                toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                toast.style.zIndex = '9999';
-                toast.style.fontFamily = 'Manrope, sans-serif';
-                toast.style.transition = 'opacity 0.3s ease';
-                document.body.appendChild(toast);
-                
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    setTimeout(() => toast.remove(), 300);
-                }, 4000);
+<dialog class="admin-modal admin-modal-wide document-preview-modal" id="document-preview-modal" aria-labelledby="document-preview-title">
+    <div class="admin-modal-card">
+        <div class="admin-modal-header">
+            <div><span class="panel-kicker">Pratinjau dokumen</span><h3 id="document-preview-title">Dokumen</h3></div>
+            <button type="button" class="modal-close" data-close-preview aria-label="Tutup pratinjau"><i aria-hidden="true" class="fas fa-xmark"></i></button>
+        </div>
+        <div class="document-preview-body" id="document-preview-body"></div>
+        <div class="admin-modal-footer">
+            <a href="#" class="btn btn-light" id="document-preview-open" target="_blank" rel="noopener"><i aria-hidden="true" class="fas fa-up-right-from-square"></i> Buka di tab baru</a>
+            <a href="#" class="btn btn-primary" id="document-preview-download"><i aria-hidden="true" class="fas fa-download"></i> Unduh</a>
+        </div>
+    </div>
+</dialog>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Menu sidebar pada layar kecil
+    const sidebar = document.getElementById('admin-sidebar');
+    const menuToggle = document.getElementById('admin-menu-toggle');
+    const setMenuOpen = (open) => {
+        sidebar.classList.toggle('is-open', open);
+        menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        menuToggle.setAttribute('aria-label', open ? 'Tutup menu' : 'Buka menu');
+        menuToggle.innerHTML = `<i aria-hidden="true" class="fas fa-${open ? 'xmark' : 'bars'}"></i>`;
+    };
+    menuToggle?.addEventListener('click', () => setMenuOpen(!sidebar.classList.contains('is-open')));
+    // Escape menutup menu mobile dan mengembalikan fokus ke tombol pemicunya.
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && sidebar.classList.contains('is-open')) {
+            setMenuOpen(false);
+            menuToggle.focus();
+        }
+    });
+
+    // Pratinjau dokumen
+    const previewModal = document.getElementById('document-preview-modal');
+    const previewBody = document.getElementById('document-preview-body');
+    const closePreview = () => {
+        previewModal.close();
+    };
+    previewModal.addEventListener('close', () => { previewBody.innerHTML = ''; });
+    previewModal.addEventListener('click', (event) => { if (event.target === previewModal) closePreview(); });
+    previewModal.querySelector('[data-close-preview]').addEventListener('click', closePreview);
+
+    document.querySelectorAll('[data-document-preview]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const { previewUrl, downloadUrl, previewKind, previewTitle } = button.dataset;
+            document.getElementById('document-preview-title').textContent = previewTitle;
+            document.getElementById('document-preview-open').href = previewUrl;
+            document.getElementById('document-preview-download').href = downloadUrl;
+
+            previewBody.innerHTML = '';
+            if (previewKind === 'image') {
+                const image = document.createElement('img');
+                image.src = previewUrl;
+                image.alt = previewTitle;
+                previewBody.appendChild(image);
+            } else {
+                const frame = document.createElement('iframe');
+                frame.src = previewUrl;
+                frame.title = previewTitle;
+                previewBody.appendChild(frame);
             }
-
-            window.Echo.channel('admin-dashboard')
-                .listen('.DashboardUpdated', (e) => {
-                    console.log('Realtime event received:', e);
-                    
-                    // Menampilkan toast UI non-blocking
-                    showToast(e.data.message);
-
-                    // Auto-increment angka tanpa refresh
-                    if (e.data.type === 'new_user') {
-                        let el = document.getElementById('stat-pending-users');
-                        if (el) el.innerText = parseInt(el.innerText) + 1;
-                    } 
-                    // Tambahkan logic auto-increment lain di sini jika ada elemen transaksinya
-                });
+            previewModal.showModal();
         });
-    </script>
+    });
+});
+</script>
+
+<!-- Realtime WebSockets (Laravel Echo + Reverb) -->
+<script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Echo === 'undefined' || typeof Pusher === 'undefined') {
+            return;
+        }
+
+        window.Pusher = Pusher;
+        window.Echo = new Echo({
+            broadcaster: 'reverb',
+            key: '{{ config('broadcasting.connections.reverb.key') }}',
+            wsHost: window.location.hostname,
+            wsPort: {{ config('broadcasting.connections.reverb.options.port', 8080) }},
+            wssPort: {{ config('broadcasting.connections.reverb.options.port', 8080) }},
+            forceTLS: (window.location.protocol === 'https:'),
+            enabledTransports: ['ws', 'wss'],
+            authEndpoint: '{{ url('/broadcasting/auth') }}',
+        });
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'admin-toast';
+            toast.setAttribute('role', 'status');
+            toast.innerText = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function incrementCounter(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const next = (parseInt(el.dataset.count ?? el.innerText, 10) || 0) + 1;
+            el.dataset.count = next;
+            (el.querySelector('.nav-badge-count') ?? el).innerText = next > 99 ? '99+' : next;
+            el.hidden = false;
+        }
+
+        window.Echo.private('admin-dashboard')
+            .listen('.DashboardUpdated', (e) => {
+                showToast(e.data.message);
+
+                if (e.data.type === 'new_user') {
+                    incrementCounter('stat-pending-users');
+                    incrementCounter('nav-badge-users');
+                }
+            });
+    });
+</script>
+@stack('scripts')
 </body>
 </html>

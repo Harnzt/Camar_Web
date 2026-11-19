@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentVerification;
 use App\Models\User;
+use App\Services\AccountSessionService;
 use App\Services\AdminAuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,8 +14,10 @@ use Illuminate\Validation\Rule;
 
 class UserVerificationController extends Controller
 {
-    public function __construct(private readonly AdminAuditService $audit)
-    {
+    public function __construct(
+        private readonly AdminAuditService $audit,
+        private readonly AccountSessionService $sessions,
+    ) {
     }
 
     public function index(Request $request)
@@ -96,6 +99,10 @@ class UserVerificationController extends Controller
                 $validated['reason'] ?? null
             );
         });
+
+        if ($validated['status'] === 'suspended') {
+            $this->sessions->terminate($user);
+        }
 
         $this->audit->log(
             'user.status.updated',
@@ -243,13 +250,55 @@ class UserVerificationController extends Controller
         ];
     }
 
-    public function download(DocumentVerification $document)
+    public function download(Request $request, DocumentVerification $document)
     {
-        abort_unless(Storage::disk('private')->exists($document->document_path), 404);
+        $this->authorizeDocumentAccess($request, $document);
 
         return Storage::disk('private')->download(
             $document->document_path,
             basename($document->document_path)
         );
+    }
+
+    public function preview(Request $request, DocumentVerification $document)
+    {
+        $this->authorizeDocumentAccess($request, $document);
+
+        $mimeType = $document->preview_mime_type;
+
+        if ($mimeType === null) {
+            return response('Format dokumen ini tidak dapat dipratinjau. Silakan unduh dokumen.', 415, [
+                'Content-Type' => 'text/plain; charset=UTF-8',
+            ]);
+        }
+
+        return Storage::disk('private')->response(
+            $document->document_path,
+            basename($document->document_path),
+            [
+                'Content-Type' => $mimeType,
+                'X-Content-Type-Options' => 'nosniff',
+                'Cache-Control' => 'private, no-store',
+            ],
+            'inline'
+        );
+    }
+
+    /**
+     * Account documents need account-verification rights; project documents
+     * need project rights. documents.verify grants both.
+     */
+    private function authorizeDocumentAccess(Request $request, DocumentVerification $document): void
+    {
+        $user = $request->user();
+        $scopePermission = $document->isProjectDocument() ? 'projects.verify' : 'users.verify';
+
+        abort_unless(
+            $user->hasAnyPermission('documents.verify', $scopePermission),
+            403,
+            'Anda tidak memiliki izin untuk membuka dokumen ini.'
+        );
+
+        abort_unless(Storage::disk('private')->exists($document->document_path), 404);
     }
 }

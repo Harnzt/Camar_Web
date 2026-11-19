@@ -244,11 +244,56 @@ class User extends Authenticatable
         return $this->hasOne(AdminLoginLog::class, 'admin_id')->latestOfMany('logged_in_at');
     }
 
+    /**
+     * Permission slugs for the current role, loaded once per model instance
+     * so repeated checks within one request reuse a single query.
+     *
+     * @var array<string, int>|null
+     */
+    protected ?array $permissionSlugCache = null;
+
     public function hasPermission(string $permission): bool
     {
-        return Permission::query()
-            ->where('slug', $permission)
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $this->permissionSlugCache ??= Permission::query()
             ->whereHas('roles', fn ($query) => $query->where('slug', $this->role))
-            ->exists();
+            ->pluck('slug')
+            ->flip()
+            ->all();
+
+        return isset($this->permissionSlugCache[$permission]);
+    }
+
+    public function hasAnyPermission(string ...$permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function flushPermissionCache(): void
+    {
+        $this->permissionSlugCache = null;
+    }
+
+    /**
+     * Admin membuat dan mengedit proyek; auditor yang memutuskan proyek boleh tayang.
+     * Super admin memiliki akses penuh ke keduanya.
+     */
+    public function canManageProjects(): bool
+    {
+        return $this->isAdmin() || $this->isSuperAdmin();
+    }
+
+    public function canReviewProjects(): bool
+    {
+        return $this->isAuditor() || $this->isSuperAdmin();
     }
 }
