@@ -103,6 +103,18 @@ class User extends Authenticatable
         return $this->status === 'suspended';
     }
 
+    /**
+     * Alasan akun belum boleh checkout atau membayar; null berarti boleh.
+     */
+    public function purchaseBlockedReason(): ?string
+    {
+        return match (true) {
+            $this->isVerified() => null,
+            $this->isRejected() => 'Verifikasi akun Anda ditolak. Silakan hubungi admin.',
+            default => 'Akun Anda masih menunggu verifikasi admin. Anda belum dapat melakukan pembelian.',
+        };
+    }
+
     // =========================================================
     // ROLE HELPERS
     // =========================================================

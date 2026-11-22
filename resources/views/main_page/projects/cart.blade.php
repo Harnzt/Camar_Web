@@ -13,6 +13,18 @@
     <h2 style="font-weight:700; margin-bottom:4px;">Keranjang Belanja</h2>
     <p style="color:#666; margin-bottom:32px;">Kredit karbon yang akan kamu beli</p>
 
+    @php
+        $checkoutBlockedReason = Auth::user()?->purchaseBlockedReason();
+    @endphp
+
+    @if(session('warning') && session('warning') !== $checkoutBlockedReason)
+        <div role="alert" style="margin-bottom:24px; padding:14px 18px; border:1px solid #f4c95d; border-radius:12px; background:#fff8df; color:#72510d; font-weight:600;">
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    @include('main_page.components.purchase-verification-notice')
+
     @if(empty($cart))
         {{-- ── EMPTY STATE ── --}}
         <div style="text-align:center; padding:80px 20px; background:#fff; border-radius:16px; border:1px solid #e2e8f0;">
@@ -182,11 +194,13 @@
                         <span id="totalDisplay" style="font-weight:800; font-size:1.15rem; color:#1a6b3c;">Rp 0</span>
                     </div>
 
-                    <button id="btnCheckout" disabled style="
+                    <button id="btnCheckout" disabled
+                        @if($checkoutBlockedReason) data-purchase-blocked="1" aria-describedby="checkoutBlockedNote" @endif
+                        style="
                         width:100%; padding:13px;
                         background:linear-gradient(135deg,#1a6b3c,#2d9c5f);
                         color:#fff; border:none; border-radius:10px;
-                        font-size:.95rem; font-weight:700; cursor:pointer;
+                        font-size:.95rem; font-weight:700; cursor:{{ $checkoutBlockedReason ? 'not-allowed' : 'pointer' }};
                         display:flex; align-items:center; justify-content:center; gap:8px;
                         opacity:.45; transition:opacity .2s;
                     ">
@@ -195,6 +209,12 @@
                             <path d="M5 12h14M12 5l7 7-7 7"/>
                         </svg>
                     </button>
+
+                    @if($checkoutBlockedReason)
+                        <p id="checkoutBlockedNote" style="margin:10px 0 0; font-size:.8rem; color:#92400e; line-height:1.4; text-align:center;">
+                            {{ $checkoutBlockedReason }}
+                        </p>
+                    @endif
 
                     <a href="{{ route('orders.store') }}" style="
                         display:block; text-align:center; margin-top:10px;

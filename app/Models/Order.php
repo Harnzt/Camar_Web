@@ -2,10 +2,17 @@
 
 namespace App\Models;
 
+use App\Services\CertificateService;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
+    /**
+     * Status setelah pembayaran dikonfirmasi Midtrans. 'verified' hanya ada pada
+     * data lama dari alur penerbitan sertifikat manual.
+     */
+    public const PAID_STATUSES = ['paid', 'verified', 'completed'];
+
     protected $fillable = [
         'user_id',
         'project_id',
@@ -57,6 +64,18 @@ class Order extends Model
     public function certificateIssuer()
     {
         return $this->belongsTo(User::class, 'certificate_issued_by');
+    }
+
+    /**
+     * Nama penerbit sertifikat; certificate_issued_by null berarti diterbitkan sistem.
+     */
+    public function getCertificateIssuerNameAttribute(): string
+    {
+        if ($this->certificate_issued_by === null) {
+            return CertificateService::SYSTEM_ISSUER_LABEL;
+        }
+
+        return $this->certificateIssuer?->name ?? 'Auditor Pemerintah';
     }
 
     public function getTransactionCodeAttribute(): string

@@ -64,7 +64,7 @@
     <section class="panel">
         <div class="panel-heading">
             <h2>Penjualan 12 bulan terakhir</h2>
-            @if(Auth::user()->hasAnyPermission('transactions.view', 'certificates.issue'))
+            @if(Auth::user()->hasPermission('transactions.view'))
                 <a href="{{ route('admin.transactions.index') }}">Lihat transaksi</a>
             @endif
         </div>

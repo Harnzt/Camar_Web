@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
             'permission' => \App\Http\Middleware\EnsurePermission::class,
+            'buyer.verified' => \App\Http\Middleware\EnsureBuyerIsVerified::class,
         ]);
         
         // Pengecualian CSRF untuk webhook Midtrans

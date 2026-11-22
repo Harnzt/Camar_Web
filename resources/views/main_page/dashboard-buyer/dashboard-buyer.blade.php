@@ -53,13 +53,17 @@
     {{-- =====================================================
          PENDING BANNER
          ===================================================== --}}
-    @if(Auth::user()->isPending())
-    <div class="pending-banner">
+    @if($purchaseBlockedReason = Auth::user()->purchaseBlockedReason())
+    <div class="pending-banner {{ Auth::user()->isRejected() ? 'is-rejected' : '' }}" role="status" data-testid="purchase-verification-notice">
         <div class="pending-banner-inner">
-            <div class="pending-icon"><i class="fas fa-hourglass-half"></i></div>
+            <div class="pending-icon"><i class="fas {{ Auth::user()->isRejected() ? 'fa-circle-xmark' : 'fa-hourglass-half' }}" aria-hidden="true"></i></div>
             <div class="pending-text">
-                <strong>Akun Anda sedang dalam proses verifikasi.</strong>
-                <span>Dokumen yang Anda upload sedang diperiksa oleh tim CAMAR. Proses ini membutuhkan 1–2 hari kerja.</span>
+                <strong>{{ $purchaseBlockedReason }}</strong>
+                @if(Auth::user()->isRejected())
+                    <span>Anda tetap dapat menghitung emisi, melihat proyek, dan mengisi keranjang.</span>
+                @else
+                    <span>Dokumen yang Anda upload sedang diperiksa oleh tim CAMAR (1–2 hari kerja). Sementara itu Anda tetap dapat menghitung emisi, melihat proyek, dan mengisi keranjang.</span>
+                @endif
             </div>
         </div>
     </div>

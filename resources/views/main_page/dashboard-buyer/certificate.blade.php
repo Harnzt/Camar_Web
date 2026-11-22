@@ -233,9 +233,9 @@
                 <div>Platform Carbon Offset</div>
             </div>
             <div class="signature">
-                <div>Diverifikasi oleh</div>
+                <div>Diterbitkan oleh</div>
                 <div class="line">
-                    <strong>{{ $order->certificateIssuer?->name ?? 'Auditor Pemerintah' }}</strong>
+                    <strong>{{ $order->certificate_issuer_name }}</strong>
                 </div>
             </div>
         </footer>

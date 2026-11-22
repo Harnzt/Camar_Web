@@ -115,13 +115,13 @@ test('permission checks reuse one query per user instance', function () {
     $auditor->hasPermission('users.verify');
     $auditor->hasPermission('audit.view');
     $auditor->hasPermission('admins.manage');
-    $auditor->hasAnyPermission('transactions.view', 'certificates.issue');
+    $auditor->hasAnyPermission('transactions.view', 'projects.verify');
 
     $permissionQueries = collect(DB::getQueryLog())
         ->filter(fn ($entry) => str_contains($entry['query'], 'permissions'));
 
     expect($permissionQueries)->toHaveCount(1)
-        ->and($auditor->hasPermission('certificates.issue'))->toBeTrue()
+        ->and($auditor->hasPermission('projects.verify'))->toBeTrue()
         ->and($auditor->hasPermission('users.verify'))->toBeFalse()
         ->and($auditor->hasPermission('admins.manage'))->toBeFalse();
 });
@@ -214,12 +214,12 @@ test('sidebar queue badges follow each role responsibility', function () {
     panelOrder($project, 'verified');
     panelOrder($project, 'pending');
 
-    // Auditor: proyek menunggu verifikasi + transaksi menunggu sertifikat.
+    // Auditor: proyek menunggu verifikasi. Sertifikat terbit otomatis, jadi tidak ada antrean transaksi.
     $this->actingAs(panelUser('auditor'))
         ->get(route('admin.dashboard'))
         ->assertOk()
         ->assertSee('id="nav-badge-projects" data-count="1"', false)
-        ->assertSee('id="nav-badge-transactions" data-count="2"', false)
+        ->assertDontSee('id="nav-badge-transactions"', false)
         ->assertDontSee('id="nav-badge-users"', false);
 
     // Admin: akun pembeli menunggu + proyek yang diminta revisi.
@@ -255,23 +255,23 @@ test('dashboard explains an empty sales chart instead of drawing zeros', functio
         ->assertDontSee('id="chart-revenue"', false);
 });
 
-test('admin can view transactions read-only but cannot process certificates', function () {
-    $admin = panelUser('admin');
+test('admin and auditor view transactions read-only', function (string $role) {
     $order = panelOrder(panelProject(), 'paid');
 
-    $this->actingAs($admin)
+    $this->actingAs(panelUser($role))
         ->get(route('admin.transactions.index'))
         ->assertOk()
         ->assertSee($order->order_number)
         ->assertSee('Mode pemantauan')
-        ->assertDontSee('Verifikasi transaksi');
+        ->assertDontSee('Verifikasi transaksi')
+        ->assertDontSee('Terbitkan sertifikat');
 
-    $this->actingAs($admin)
-        ->patch(route('admin.transactions.update', $order), ['status' => 'verified'])
-        ->assertForbidden();
+    $this->actingAs(panelUser($role, 'verified', "{$role}-2@example.test"))
+        ->patch("/admin/transactions/{$order->id}", ['status' => 'verified'])
+        ->assertNotFound();
 
     expect($order->fresh()->status)->toBe('paid');
-});
+})->with(['admin', 'auditor']);
 
 // ---------------------------------------------------------------
 // Role & Permission, audit log
@@ -498,33 +498,39 @@ test('price, description and lower stock edits keep a live project approved', fu
 // Transaksi: pembayaran dari Midtrans, panel hanya sertifikat
 // ---------------------------------------------------------------
 
-test('auditor verifies a paid order and then issues its certificate', function () {
-    $auditor = panelUser('auditor');
-    $order = panelOrder(panelProject(), 'paid');
+test('legacy verified orders stay filterable and labelled in the transaction panel', function () {
+    $project = panelProject();
+    $legacyOrder = panelOrder($project, 'verified');
+    $paidOrder = panelOrder($project, 'paid');
 
-    $this->actingAs($auditor)
-        ->patch(route('admin.transactions.update', $order), ['status' => 'verified'])
-        ->assertSessionHasNoErrors();
-
-    $this->actingAs($auditor)
-        ->patch(route('admin.transactions.update', $order), ['status' => 'completed'])
-        ->assertSessionHasNoErrors();
-
-    $order->refresh();
-    expect($order->status)->toBe('completed')
-        ->and($order->certificate_number)->toStartWith('CAMAR-CERT-');
+    $this->actingAs(panelUser('auditor'))
+        ->get(route('admin.transactions.index', ['status' => 'verified']))
+        ->assertOk()
+        ->assertSee($legacyOrder->order_number)
+        ->assertSee('<span class="status verified">Diverifikasi Auditor</span>', false)
+        ->assertDontSee($paidOrder->order_number);
 });
 
 test('payment statuses cannot be changed manually from the panel', function () {
     $order = panelOrder(panelProject(), 'pending');
 
     $this->actingAs(panelUser('super_admin'))
-        ->patch(route('admin.transactions.update', $order), ['status' => 'paid'])
-        ->assertSessionHasErrors('status');
-
-    $this->actingAs(panelUser('super_admin', 'verified', 'super2@example.test'))
-        ->patch(route('admin.transactions.update', $order), ['status' => 'cancelled', 'admin_notes' => 'x'])
-        ->assertSessionHasErrors('status');
+        ->patch("/admin/transactions/{$order->id}", ['status' => 'paid'])
+        ->assertNotFound();
 
     expect($order->fresh()->status)->toBe('pending');
+});
+
+test('certificate issued by the system is labelled as automatic in the transaction panel', function () {
+    $order = panelOrder(panelProject(), 'completed', [
+        'certificate_number' => 'CAMAR-CERT-20261122-ABC123',
+        'certificate_issued_at' => now(),
+        'certificate_issued_by' => null,
+    ]);
+
+    $this->actingAs(panelUser('admin'))
+        ->get(route('admin.transactions.index'))
+        ->assertOk()
+        ->assertSee($order->certificate_number)
+        ->assertSee('Diterbitkan oleh: Sistem CAMAR (otomatis)');
 });

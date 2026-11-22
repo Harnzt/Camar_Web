@@ -13,7 +13,6 @@
 <body>
 @php
     $authUser = Auth::user();
-    $canIssueCertificates = $authUser->hasPermission('certificates.issue');
 
     // Navigasi dikelompokkan: pekerjaan harian di atas, akses & keamanan di bawah.
     $navGroups = [
@@ -21,7 +20,7 @@
             ['show' => $authUser->hasPermission('admin.dashboard'), 'route' => 'admin.dashboard', 'match' => 'admin.dashboard', 'icon' => 'fa-chart-pie', 'label' => 'Dashboard'],
             ['show' => $authUser->hasPermission('users.verify'), 'route' => 'admin.users.index', 'match' => 'admin.users.*', 'icon' => 'fa-user-check', 'label' => 'Verifikasi Akun', 'badge' => ['users', 'nav-badge-users', 'akun menunggu']],
             ['show' => $authUser->hasPermission('projects.verify'), 'route' => 'admin.projects.index', 'match' => 'admin.projects.*', 'icon' => 'fa-seedling', 'label' => $authUser->canManageProjects() ? 'Kelola Proyek' : 'Verifikasi Proyek', 'badge' => ['projects', 'nav-badge-projects', $authUser->canReviewProjects() ? 'proyek menunggu verifikasi' : 'proyek perlu revisi']],
-            ['show' => $authUser->hasAnyPermission('transactions.view', 'certificates.issue'), 'route' => 'admin.transactions.index', 'match' => 'admin.transactions.*', 'icon' => 'fa-receipt', 'label' => $canIssueCertificates ? 'Transaksi & Sertifikat' : 'Transaksi', 'badge' => ['transactions', 'nav-badge-transactions', 'transaksi menunggu sertifikat']],
+            ['show' => $authUser->hasPermission('transactions.view'), 'route' => 'admin.transactions.index', 'match' => 'admin.transactions.*', 'icon' => 'fa-receipt', 'label' => 'Transaksi'],
         ],
         'Akses & keamanan' => [
             ['show' => $authUser->hasPermission('admins.manage'), 'route' => 'admin.admins.index', 'match' => 'admin.admins.*', 'icon' => 'fa-user-shield', 'label' => $authUser->isSuperAdmin() ? 'Kelola Admin' : 'Kelola Auditor'],

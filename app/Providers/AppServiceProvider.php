@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\Order;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Support\ServiceProvider;
@@ -40,9 +39,6 @@ class AppServiceProvider extends ServiceProvider
                     (bool) $user?->canManageProjects() => Project::where('verification_status', 'revision_required')->count(),
                     default => null,
                 },
-                'transactions' => $user?->hasPermission('certificates.issue')
-                    ? Order::whereIn('status', ['paid', 'verified'])->count()
-                    : null,
             ]);
         });
     }

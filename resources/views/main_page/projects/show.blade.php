@@ -159,12 +159,24 @@
                         </div>
                     </div>
 
+                    @php
+                        $buyNowBlockedReason = Auth::user()->purchaseBlockedReason();
+                    @endphp
+
+                    @if($buyNowBlockedReason)
+                        <p id="buyNowBlockedNote" role="status" style="margin:12px 0 0; padding:10px 12px; border-radius:10px; background:{{ Auth::user()->isRejected() ? '#fef2f2' : '#fff8df' }}; color:{{ Auth::user()->isRejected() ? '#991b1b' : '#72510d' }}; font-size:.82rem; line-height:1.45;">
+                            {{ $buyNowBlockedReason }} Anda tetap dapat menambahkan proyek ke keranjang.
+                        </p>
+                    @endif
+
                     <div class="pc-actions">
                         <div class="buy-now-wrapper">
                             <input type="hidden" id="buyProjectId" value="{{ $project->id }}">
-                            <input type="hidden" id="buyQty" value="1"> 
-                            
-                            <button type="button" id="btnBuyNowInstant" class="btn btn-primary" style="width:100%">
+                            <input type="hidden" id="buyQty" value="1">
+
+                            <button type="button" id="btnBuyNowInstant" class="btn btn-primary"
+                                style="width:100%;{{ $buyNowBlockedReason ? ' opacity:.5; cursor:not-allowed;' : '' }}"
+                                @if($buyNowBlockedReason) disabled aria-describedby="buyNowBlockedNote" @endif>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; margin-right:5px; display:inline-block; vertical-align:middle;">
                                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                                 </svg>

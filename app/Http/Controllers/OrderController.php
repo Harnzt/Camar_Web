@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
 use App\Models\Order;
+use App\Models\Project;
+use App\Services\CertificateService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
@@ -328,115 +334,195 @@ class OrderController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════
-     |  MIDTRANS WEBHOOK — Mengubah status pesanan otomatis
+     |  MIDTRANS WEBHOOK — Satu-satunya jalur yang mengubah status
+     |  pesanan, stok, dan menerbitkan sertifikat.
      ═══════════════════════════════════════════════════════════ */
-    public function midtransNotification(Request $request)
+    public function midtransNotification(Request $request, CertificateService $certificates): JsonResponse
     {
-        $serverKey = config('midtrans.server_key');
-        $payload   = $request->all();
+        $payload = $request->all();
         $orderIdWebhook = $payload['order_id'] ?? null;
 
-        if (!$orderIdWebhook) {
+        if (! $orderIdWebhook) {
             return response()->json(['message' => 'Missing order_id'], 400);
         }
 
-        $signatureKey = hash('sha512', $orderIdWebhook . $payload['status_code'] . $payload['gross_amount'] . $serverKey);
+        $expectedSignature = hash(
+            'sha512',
+            $orderIdWebhook.($payload['status_code'] ?? '').($payload['gross_amount'] ?? '').config('midtrans.server_key')
+        );
 
-        if ($signatureKey !== $payload['signature_key']) {
+        if (! is_string($payload['signature_key'] ?? null) || ! hash_equals($expectedSignature, $payload['signature_key'])) {
             return response()->json(['message' => 'Invalid signature'], 403);
         }
 
-        $transactionStatus = $payload['transaction_status'];
-
-        $newStatus = match (true) {
-            $transactionStatus === 'capture' || $transactionStatus === 'settlement' => 'paid',
-            in_array($transactionStatus, ['deny', 'cancel', 'expire']) => 'failed',
+        $newStatus = match ($payload['transaction_status'] ?? null) {
+            'capture', 'settlement' => 'paid',
+            'deny', 'cancel', 'expire' => 'failed',
             default => null,
         };
 
-        if ($newStatus) {
-            // Cari data order berdasarkan order_number dari webhook midtrans
-            $mainOrder = Order::where('order_number', $orderIdWebhook)->first();
-            
-            if ($mainOrder) {
-                // Ambil semua order pending milik user ini yang dibuat di waktu yang sama/berdekatan jika multi-item
-                $orderParts = explode('-', $orderIdWebhook);
-                $baseTimestamp = isset($orderParts[1]) ? $orderParts[1] : null;
+        if ($newStatus === null) {
+            return response()->json(['message' => 'OK']);
+        }
 
-                if ($baseTimestamp && str_contains($orderIdWebhook, 'ORDER-')) {
-                    $queryOrders = Order::where('order_number', 'LIKE', "ORDER-{$baseTimestamp}-%")
-                                        ->where('status', 'pending');
-                } else {
-                    $queryOrders = Order::where('id', $mainOrder->id);
+        DB::transaction(function () use ($orderIdWebhook, $newStatus, $payload, $certificates) {
+            $mainOrder = Order::query()->where('order_number', $orderIdWebhook)->first();
+
+            if (! $mainOrder) {
+                Log::warning('Midtrans webhook: order tidak ditemukan.', ['order_id' => $orderIdWebhook]);
+
+                return;
+            }
+
+            // Notifikasi ulang untuk order yang sudah diproses tidak lagi menemukan baris 'pending'.
+            $orders = $this->midtransOrderGroupQuery($mainOrder)
+                ->where('status', 'pending')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            if ($orders->isEmpty()) {
+                return;
+            }
+
+            if ($newStatus === 'paid' && (int) round((float) $orders->sum('total_price')) !== (int) round((float) ($payload['gross_amount'] ?? 0))) {
+                Log::warning('Midtrans webhook: gross_amount berbeda dengan total pesanan.', [
+                    'order_id' => $orderIdWebhook,
+                    'gross_amount' => $payload['gross_amount'] ?? null,
+                    'orders_total' => $orders->sum('total_price'),
+                ]);
+            }
+
+            foreach ($orders as $order) {
+                $order->update([
+                    'status' => $newStatus,
+                    'payment_method' => $payload['payment_type'] ?? 'midtrans',
+                ]);
+
+                if ($newStatus !== 'paid') {
+                    continue;
                 }
 
-                $ordersToUpdate = $queryOrders->get();
+                $project = Project::query()->lockForUpdate()->find($order->project_id);
+                $order->setRelation('project', $project);
 
-                foreach ($ordersToUpdate as $order) {
-                    $order->update([
-                        'status'         => $newStatus,
-                        'payment_method' => $payload['payment_type'] ?? 'midtrans',
+                $project?->decrement('stock_available', $order->quantity);
+
+                if ($certificates->canIssueFor($order)) {
+                    $certificates->issueFor($order);
+                } else {
+                    Log::warning('Sertifikat tidak diterbitkan otomatis karena proyek belum approved.', [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'project_id' => $order->project_id,
+                        'verification_status' => $project?->verification_status,
                     ]);
-
-                    if ($newStatus === 'paid' && $order->project) {
-                        $order->project->decrement('stock_available', $order->quantity);
-                    }
                 }
             }
-        }
+        });
 
         return response()->json(['message' => 'OK']);
     }
 
-    /* ═══════════════════════════════════════════════════════════
-     |  REDIRECT CALLBACKS FROM POPUP MIDTRANS
-     ═══════════════════════════════════════════════════════════ */
-    public function midtransFinish(Request $request)
+    /**
+     * Checkout keranjang membuat beberapa order (ORDER-{timestamp}-{n}-...) yang
+     * dibayar dalam satu transaksi Midtrans memakai order_number order pertama.
+     *
+     * @return Builder<Order>
+     */
+    private function midtransOrderGroupQuery(Order $mainOrder): Builder
     {
-        $ids = session()->get('pending_transaction_ids', []);
-        
-        if (!empty($ids)) {
-            Order::whereIn('id', $ids)->update([
-                'status'         => 'paid',
-            ]);
-            
-            $orders = Order::whereIn('id', $ids)->get();
-            foreach ($orders as $order) {
-                if ($order->project) {
-                    $order->project->decrement('stock_available', $order->quantity);
-                }
-            }
-            
-            session()->forget('pending_transaction_ids');
-            return redirect()->route('orders.success.multi', ['ids' => implode(',', $ids)])
-                ->with('success', 'Pembayaran sukses, terima kasih!');
+        $query = Order::query()->where('user_id', $mainOrder->user_id);
+
+        if (preg_match('/^ORDER-(\d+)-/', $mainOrder->order_number, $matches) === 1) {
+            return $query->where('order_number', 'like', "ORDER-{$matches[1]}-%");
         }
 
-        return redirect()->route('orders.index');
+        return $query->whereKey($mainOrder->id);
     }
 
-    public function midtransError(Request $request)
+    /* ═══════════════════════════════════════════════════════════
+     |  REDIRECT CALLBACKS FROM POPUP MIDTRANS
+     |  Hanya mengarahkan ke halaman status; tidak mengubah data pesanan.
+     ═══════════════════════════════════════════════════════════ */
+    public function midtransFinish(Request $request): RedirectResponse
     {
-        return redirect()->route('cart.index')->with('error', 'Pembayaran dibatalkan atau gagal.');
+        $ids = $this->redirectOrderIds($request);
+        session()->forget('pending_transaction_ids');
+
+        return $this->redirectToOrderStatus($ids);
     }
 
-    public function midtransPending(Request $request)
+    public function midtransError(Request $request): RedirectResponse
     {
-        $ids = session()->get('pending_transaction_ids', []);
-        return redirect()->route('orders.success.multi', ['ids' => implode(',', $ids ?? [])])
+        return $this->redirectToOrderStatus($this->redirectOrderIds($request))
+            ->with('error', 'Pembayaran dibatalkan atau gagal.');
+    }
+
+    public function midtransPending(Request $request): RedirectResponse
+    {
+        return $this->redirectToOrderStatus($this->redirectOrderIds($request))
             ->with('info', 'Pembayaran Anda sedang menunggu penyelesaian.');
     }
 
+    /**
+     * @return array<int, int>
+     */
+    private function redirectOrderIds(Request $request): array
+    {
+        $ids = collect(explode(',', (string) $request->query('ids', '')))
+            ->merge(session()->get('pending_transaction_ids', []))
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id);
+
+        if ($ids->isNotEmpty()) {
+            return Order::query()
+                ->where('user_id', Auth::id())
+                ->whereIn('id', $ids)
+                ->pluck('id')
+                ->all();
+        }
+
+        $midtransOrderId = $request->query('order_id');
+
+        if (is_string($midtransOrderId) && $midtransOrderId !== '') {
+            $mainOrder = Order::query()
+                ->where('user_id', Auth::id())
+                ->where('order_number', $midtransOrderId)
+                ->first();
+
+            if ($mainOrder) {
+                return $this->midtransOrderGroupQuery($mainOrder)->pluck('id')->all();
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     */
+    private function redirectToOrderStatus(array $ids): RedirectResponse
+    {
+        if (empty($ids)) {
+            return redirect()->route('buyer.transactions');
+        }
+
+        return redirect()->route('orders.success.multi', ['ids' => implode(',', $ids)]);
+    }
+
     /* ═══════════════════════════════════════════════════════════
-     |  SUCCESS INTERFACES
+     |  SUCCESS INTERFACES — Status selalu dibaca dari database
      ═══════════════════════════════════════════════════════════ */
     public function success($id)
     {
         $order = Order::with('project')->findOrFail($id);
         if ($order->user_id !== Auth::id()) abort(403);
-        
+
         $transactions = collect([$order]);
-        return view('main_page.projects.success', compact('transactions'));
+        $paymentState = $this->paymentState($transactions);
+
+        return view('main_page.projects.success', compact('transactions', 'paymentState'));
     }
 
     public function successMulti(Request $request)
@@ -449,7 +535,26 @@ class OrderController extends Controller
 
         if ($transactions->isEmpty()) return redirect()->route('orders.index');
 
-        return view('main_page.projects.success', compact('transactions'));
+        $paymentState = $this->paymentState($transactions);
+
+        return view('main_page.projects.success', compact('transactions', 'paymentState'));
+    }
+
+    /**
+     * @param  Collection<int, Order>  $orders
+     * @return 'confirmed'|'failed'|'waiting'
+     */
+    private function paymentState(Collection $orders): string
+    {
+        if ($orders->every(fn (Order $order) => in_array($order->status, Order::PAID_STATUSES, true))) {
+            return 'confirmed';
+        }
+
+        if ($orders->every(fn (Order $order) => in_array($order->status, ['failed', 'cancelled'], true))) {
+            return 'failed';
+        }
+
+        return 'waiting';
     }
 
     /* ═══════════════════════════════════════════════════════════

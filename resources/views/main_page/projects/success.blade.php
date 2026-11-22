@@ -1,5 +1,42 @@
 @extends('main_page.layout.app')
-@section('title', 'Pembayaran Berhasil')
+
+@php
+    // Status dibaca dari database (diisi webhook Midtrans), bukan dari redirect popup.
+    $paymentState = $paymentState ?? 'waiting';
+    $allCertificatesIssued = isset($transactions)
+        && collect($transactions)->every(fn ($t) => ! is_array($t) && filled($t->certificate_number));
+    $statusCopy = match ($paymentState) {
+        'confirmed' => [
+            'title' => 'Pembayaran Berhasil! 🌿',
+            'page_title' => 'Pembayaran Berhasil',
+            'color' => '#1a6b3c',
+            'icon_bg' => 'linear-gradient(135deg,#1a6b3c,#2d9c5f)',
+            'border' => '#d1fae5',
+        ],
+        'failed' => [
+            'title' => 'Pembayaran Gagal',
+            'page_title' => 'Pembayaran Gagal',
+            'color' => '#b91c1c',
+            'icon_bg' => 'linear-gradient(135deg,#b91c1c,#ef4444)',
+            'border' => '#fecaca',
+        ],
+        default => [
+            'title' => 'Menunggu konfirmasi pembayaran',
+            'page_title' => 'Menunggu Konfirmasi Pembayaran',
+            'color' => '#92400e',
+            'icon_bg' => 'linear-gradient(135deg,#d97706,#f59e0b)',
+            'border' => '#fde68a',
+        ],
+    };
+@endphp
+
+@section('title', $statusCopy['page_title'])
+
+@if($paymentState === 'waiting')
+    @section('head')
+        <meta http-equiv="refresh" content="15">
+    @endsection
+@endif
 
 @section('content')
 <main style="padding: 120px 0 80px; min-height: 80vh; background: #f7faf8;">
@@ -15,30 +52,54 @@
         {{ session('info') }}
     </div>
     @endif
+    @if(session('error'))
+    <div class="alert alert-danger" style="border-radius:12px; margin-bottom:20px;">
+        {{ session('error') }}
+    </div>
+    @endif
 
-    {{-- ── KARTU SUKSES ── --}}
+    {{-- ── KARTU STATUS PEMBAYARAN ── --}}
     <div style="
         background:#fff; border-radius:20px;
         padding:48px 40px; text-align:center;
         box-shadow:0 8px 40px rgba(26,107,60,.1);
-        border:1px solid #d1fae5;
+        border:1px solid {{ $statusCopy['border'] }};
     ">
         {{-- Ikon --}}
         <div style="
             width:80px; height:80px; border-radius:50%;
-            background:linear-gradient(135deg,#1a6b3c,#2d9c5f);
+            background:{{ $statusCopy['icon_bg'] }};
             display:flex; align-items:center; justify-content:center;
-            margin:0 auto 20px; box-shadow:0 4px 20px rgba(26,107,60,.3);
+            margin:0 auto 20px; box-shadow:0 4px 20px rgba(0,0,0,.15);
         ">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                @if($paymentState === 'confirmed')
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                @elseif($paymentState === 'failed')
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                @else
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <polyline points="12 7 12 12 15 14"></polyline>
+                @endif
             </svg>
         </div>
 
-        <h2 style="font-weight:800; color:#1a6b3c; margin:0 0 8px;">Pembayaran Berhasil! 🌿</h2>
+        <h2 style="font-weight:800; color:{{ $statusCopy['color'] }}; margin:0 0 8px;">{{ $statusCopy['title'] }}</h2>
         <p style="color:#666; font-size:.95rem; margin-bottom:32px; line-height:1.6;">
-            Terima kasih telah berkontribusi dalam pengurangan emisi karbon.<br>
-            Kredit karbon kamu sedang diproses oleh tim kami.
+            @if($paymentState === 'confirmed')
+                Terima kasih telah berkontribusi dalam pengurangan emisi karbon.<br>
+                @if($allCertificatesIssued)
+                    Sertifikat digital kamu sudah terbit dan bisa dilihat di dashboard.
+                @else
+                    Sertifikat digital akan terbit otomatis setelah proyek terkait disetujui.
+                @endif
+            @elseif($paymentState === 'failed')
+                Pembayaran tidak berhasil atau sudah kedaluwarsa. Silakan buat pesanan baru.
+            @else
+                Kami belum menerima konfirmasi dari Midtrans. Halaman ini akan memuat ulang otomatis.<br>
+                Jika kamu membayar lewat transfer bank atau QRIS, selesaikan pembayaran sesuai instruksi.
+            @endif
         </p>
 
         {{-- ── Daftar Transaksi (Multi) ── --}}

@@ -306,10 +306,11 @@ const CART = (() => {
     function updateCheckoutBtn() {
         const btn = el('btnCheckout');
         if (!btn) return;
-        const hasSelection = selected.size > 0;
-        btn.disabled      = !hasSelection;
-        btn.style.opacity = hasSelection ? '1' : '.45';
-        btn.style.cursor  = hasSelection ? 'pointer' : 'not-allowed';
+        // Akun yang belum diverifikasi admin tidak boleh checkout (lihat EnsureBuyerIsVerified).
+        const canCheckout = selected.size > 0 && btn.dataset.purchaseBlocked !== '1';
+        btn.disabled      = !canCheckout;
+        btn.style.opacity = canCheckout ? '1' : '.45';
+        btn.style.cursor  = canCheckout ? 'pointer' : 'not-allowed';
     }
 
     /* ===================== EMPTY STATE ===================== */
@@ -348,6 +349,10 @@ const CART = (() => {
     /* ===================== GO TO CHECKOUT (MIDTRANS) ===================== */
 
     function goToCheckout() {
+        if (el('btnCheckout')?.dataset.purchaseBlocked === '1') {
+            return;
+        }
+
         if (selected.size === 0) {
             alert('Pilih minimal 1 produk untuk di-checkout!');
             return;

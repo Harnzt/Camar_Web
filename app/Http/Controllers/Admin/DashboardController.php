@@ -33,7 +33,7 @@ class DashboardController extends Controller
             'active_managed_accounts' => User::whereIn('role', $managedRoles)->where('status', 'verified')->count(),
         ];
 
-        $salesChart = $user->hasAnyPermission('transactions.view', 'certificates.issue')
+        $salesChart = $user->hasPermission('transactions.view')
             ? $this->monthlySales()
             : null;
 

@@ -85,22 +85,25 @@ Route::middleware('auth')->group(function () {
     Route::post('/calculator/store', [CalculatorController::class, 'store'])->middleware('role:buyer');
     Route::delete('/calculator/clear', [CalculatorController::class, 'clear'])->middleware('role:buyer')->name('calculator.clear');
     //Oerder
-    Route::post('/orders/confirm',        [OrderController::class, 'confirm'])->name('orders.confirm');
     Route::get('/orders/{id}/success',     [OrderController::class, 'success'])->name('orders.success');
-    Route::get('/orders/{id}/checkout',   [OrderController::class, 'checkout'])->name('orders.checkout.view');
-    Route::post('/orders/store',          [OrderController::class, 'store'])->middleware('role:buyer')->name('orders.store');
     Route::get('/orders/{id}',            [OrderController::class, 'show'])->name('orders.show');
-    Route::post('/orders',                [ProjectController::class, 'checkout'])->middleware('role:buyer')->name('orders.checkout');
     Route::get('/orders/success/multi',   [OrderController::class, 'successMulti'])->name('orders.success.multi');
     Route::get('/orders',                 [OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/checkout/confirm', [OrderController::class, 'checkoutConfirm'])->name('orders.checkout.confirm');
-    Route::post('/orders/checkout/confirm', [App\Http\Controllers\OrderController::class, 'confirm'])->name('orders.checkout.confirm.submit');
 
-    // Midtrans callback routes (redirect dari payment popup)
+    // Membuat pesanan dan memulai pembayaran hanya untuk akun yang sudah diverifikasi admin.
+    Route::middleware('buyer.verified')->group(function () {
+        Route::post('/orders/confirm',        [OrderController::class, 'confirm'])->name('orders.confirm');
+        Route::get('/orders/{id}/checkout',   [OrderController::class, 'checkout'])->name('orders.checkout.view');
+        Route::post('/orders/store',          [OrderController::class, 'store'])->middleware('role:buyer')->name('orders.store');
+        Route::post('/orders',                [ProjectController::class, 'checkout'])->middleware('role:buyer')->name('orders.checkout');
+        Route::get('/orders/checkout/confirm', [OrderController::class, 'checkoutConfirm'])->name('orders.checkout.confirm');
+        Route::post('/orders/checkout/confirm', [OrderController::class, 'confirm'])->name('orders.checkout.confirm.submit');
+    });
+
+    // Redirect dari popup Midtrans: hanya menampilkan status, tidak mengubah data.
     Route::get('/orders/midtrans/finish',       [OrderController::class, 'midtransFinish'])->name('orders.midtrans.finish');
     Route::get('/orders/midtrans/error',        [OrderController::class, 'midtransError'])->name('orders.midtrans.error');
     Route::get('/orders/midtrans/pending',      [OrderController::class, 'midtransPending'])->name('orders.midtrans.pending');
-    Route::post('/orders/midtrans/notification', [App\Http\Controllers\OrderController::class, 'midtransNotification']);
 
     });
 
@@ -147,13 +150,10 @@ Route::middleware(['auth', 'role:admin,auditor,super_admin'])
                 ->name('projects.update');
         });
 
-        Route::middleware('permission:transactions.view|certificates.issue')->group(function () {
+        // Read-only: status pembayaran dari Midtrans, sertifikat terbit otomatis oleh sistem.
+        Route::middleware('permission:transactions.view')->group(function () {
             Route::get('/transactions', [TransactionManagementController::class, 'index'])
                 ->name('transactions.index');
-            // Status pembayaran diatur otomatis oleh Midtrans; panel hanya memproses sertifikat.
-            Route::patch('/transactions/{order}', [TransactionManagementController::class, 'update'])
-                ->middleware('permission:certificates.issue')
-                ->name('transactions.update');
         });
 
         Route::middleware(['role:admin,super_admin', 'permission:admins.manage'])->group(function () {

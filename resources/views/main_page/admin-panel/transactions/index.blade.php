@@ -1,10 +1,7 @@
 @extends('main_page.admin-panel.layout')
 
-@php
-    $canIssueCertificates = Auth::user()->hasPermission('certificates.issue');
-@endphp
-@section('title', $canIssueCertificates ? 'Transaksi & Sertifikat' : 'Transaksi')
-@section('page-title', $canIssueCertificates ? 'Transaksi & Penerbitan Sertifikat' : 'Transaksi')
+@section('title', 'Transaksi')
+@section('page-title', 'Transaksi')
 
 @section('content')
 <section class="panel">
@@ -21,11 +18,7 @@
     @endphp
 
     <div class="alert alert-info">
-        @if($canIssueCertificates)
-            Status pembayaran diperbarui otomatis oleh Midtrans. Di sini Anda memverifikasi transaksi yang sudah dibayar lalu menerbitkan sertifikatnya.
-        @else
-            Mode pemantauan. Status pembayaran diperbarui otomatis oleh Midtrans, dan sertifikat diterbitkan oleh Auditor.
-        @endif
+        Mode pemantauan. Status pembayaran diperbarui otomatis oleh Midtrans, dan sertifikat diterbitkan otomatis oleh sistem setelah pembayaran terkonfirmasi untuk proyek yang sudah disetujui.
     </div>
 
     <form method="GET" class="filter-bar">
@@ -54,9 +47,6 @@
                     <th>Pembeli</th>
                     <th>Jumlah & Total</th>
                     <th>Status</th>
-                    @if($canIssueCertificates)
-                        <th>Langkah berikutnya</th>
-                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -85,42 +75,15 @@
                             @endif
                             @if($order->certificate_number)
                                 <small>Sertifikat: {{ $order->certificate_number }}</small>
-                            @endif
-                            @if($order->certificateIssuer)
-                                <small>Diterbitkan oleh: {{ $order->certificateIssuer->name }}</small>
+                                <small>Diterbitkan oleh: {{ $order->certificate_issuer_name }}</small>
+                            @elseif(in_array($order->status, ['paid', 'verified'], true))
+                                <small>Sertifikat belum terbit.</small>
                             @endif
                         </td>
-                        @if($canIssueCertificates)
-                            <td>
-                                @php
-                                    $nextStep = match ($order->status) {
-                                        'paid' => ['verified', 'Verifikasi transaksi'],
-                                        'verified' => ['completed', 'Terbitkan sertifikat'],
-                                        default => null,
-                                    };
-                                @endphp
-
-                                @if($nextStep)
-                                    <form method="POST" action="{{ route('admin.transactions.update', $order) }}" class="table-form-inline">
-                                        @csrf @method('PATCH')
-                                        <input type="hidden" name="status" value="{{ $nextStep[0] }}">
-                                        <label for="notes-{{ $order->id }}">Catatan (opsional)</label>
-                                        <input type="text" id="notes-{{ $order->id }}" name="admin_notes" value="{{ $order->admin_notes }}">
-                                        <button type="submit" class="btn btn-primary btn-sm">{{ $nextStep[1] }}</button>
-                                    </form>
-                                @else
-                                    <small>{{ match ($order->status) {
-                                        'completed' => 'Sertifikat sudah terbit.',
-                                        'pending' => 'Menunggu pembayaran dari Midtrans.',
-                                        default => 'Tidak ada langkah untuk status ini.',
-                                    } }}</small>
-                                @endif
-                            </td>
-                        @endif
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ $canIssueCertificates ? 6 : 5 }}">
+                        <td colspan="5">
                             <div class="empty-state">
                                 @if(request()->filled('search') || request()->filled('status'))
                                     Tidak ada transaksi yang cocok dengan filter ini. <a href="{{ route('admin.transactions.index') }}">Reset filter</a>.
